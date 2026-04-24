@@ -79,19 +79,31 @@ Nous Portal 託管的 tool-calling 服務。2026-04 ungate 後採**訂閱制 + p
 
 ### 建議
 
-- **暫不採用**。待下面條件達成再重評：
-  1. Missive KG 查不到的特定外部資料源變成 routine 需求
-  2. Nous Portal 定價公佈且可接受
-  3. Nous 資料處理合規符合 CK 內部政策（目前未知）
-- Default stance：`disabled` 或 unset
+- **拒絕採用**（2026-04-19 更新）。**零付費開發** 硬約束 — 訂閱費違反規則，永久 OUT OF SCOPE。
+- Default stance：`disabled` / unset
+- 替代路徑：若真需要特定外部資料源，在 Missive 側用 `ezbid` pattern 自寫 scraper，或走 ck-ollama 本地推論
 
-## 一表總結
+## 一表總結（2026-04-19 修訂 — 零付費約束）
 
 | 功能 | 對 CK 價值 | 風險 | 建議 | 立即動作 |
 |---|---|---|---|---|
-| `/steer` | 高 | 低 | **採用** | 隨 v2026.4.16 rebase 已內含；告知使用者可用 |
-| `execute_code project/strict` | 中 | 低-中 | **預設接受**，ADR-0017 時重評 | 隨 rebase 已內含；無改動 |
-| Tool Gateway | 低 | 中（成本+lock-in） | **暫不採用** | 保持 unset |
+| `/steer` | 高 | 低 | **採用** | 隨 v2026.4.16 rebase 已內含 |
+| `execute_code project/strict` | 中 | 低-中 | **預設接受**，ADR-0017 時重評 | 隨 rebase 已內含 |
+| Tool Gateway | 低 | 中（成本+lock-in） | ❌ **拒絕**（付費訂閱違反零付費約束） | 永久 unset |
+
+## 零付費開發約束（2026-04-19 新增）
+
+本項目所有技術選型必須符合「本地化不衍生其他開發費用」：
+
+- ❌ Anthropic API credit — OUT OF SCOPE
+- ❌ Tool Gateway 訂閱 — OUT OF SCOPE
+- ❌ hermes-agent-self-evolution `$2–10/run` 付費優化 — OUT OF SCOPE（雖 MIT，但實際運行需 LLM API 費用）
+- ❌ OpenAI / Claude / Groq Dev tier — OUT OF SCOPE
+- ✅ ck-ollama 本地 GPU 推論（RTX 4060 8GB）
+- ✅ qwen2.5:7b-ctx64k（Modelfile num_ctx=65536 override，已建）
+- ✅ Groq 免費層當 burst fallback（TPM 受限，不可當主）
+- ✅ Open WebUI 本機部署（:3000）
+- ✅ Telegram Bot API（免費）
 
 ## 後續事項
 
