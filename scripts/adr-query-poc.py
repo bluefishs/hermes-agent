@@ -8,6 +8,7 @@ ck-adr-query PoC — 純 stdlib 跨 6 repo ADR 查詢
   python scripts/adr-query-poc.py list [--repo CK_X] [--lifecycle accepted]
   python scripts/adr-query-poc.py lifecycle <FQID>
   python scripts/adr-query-poc.py collisions
+  python scripts/adr-query-poc.py index                 (full JSON index — for Variant B cron)
 
 設計依據：docs/plans/skill-ck-adr-query-design.md
 紀律：只讀；不杜撰；不改 ADR；stale warn > 30 天。
@@ -15,10 +16,12 @@ ck-adr-query PoC — 純 stdlib 跨 6 repo ADR 查詢
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
-from dataclasses import dataclass
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 CKPROJECT_ROOT = Path(os.environ.get("CKPROJECT_ROOT", "D:/CKProject"))
@@ -179,6 +182,44 @@ def cmd_collisions(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_index(args: argparse.Namespace) -> int:
+    """Output full ADR index as JSON (for Variant B host cron → wiki/raw/adr-index.json)."""
+    adrs = discover_adrs()
+    by_num: dict[int, list[str]] = {}
+    for adr in adrs:
+        by_num.setdefault(adr.number, []).append(adr.fqid)
+    collisions = {num: fqids for num, fqids in by_num.items() if len(fqids) > 1}
+
+    payload = {
+        "schema_version": "1.0",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z") or time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "ckproject_root": str(CKPROJECT_ROOT),
+        "total_adrs": len(adrs),
+        "total_collisions": len(collisions),
+        "adrs": [
+            {
+                "fqid": a.fqid,
+                "repo": a.repo,
+                "number": a.number,
+                "title": a.title,
+                "status": a.status,
+                "lifecycle": a.lifecycle,
+                "date": a.date,
+                "path": str(a.path).replace("\\", "/"),
+            }
+            for a in sorted(adrs, key=lambda x: (x.repo, x.number))
+        ],
+        "collisions": [
+            {"number": num, "fqids": fqids} for num, fqids in sorted(collisions.items())
+        ],
+    }
+    if args.pretty:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -204,6 +245,10 @@ def main() -> int:
 
     co = sub.add_parser("collisions")
     co.set_defaults(fn=cmd_collisions)
+
+    idx = sub.add_parser("index", help="Output full JSON index (for Variant B host cron)")
+    idx.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
+    idx.set_defaults(fn=cmd_index)
 
     args = p.parse_args()
     return args.fn(args)
