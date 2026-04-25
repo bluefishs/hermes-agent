@@ -1,9 +1,18 @@
-# Skill Design — `ck-loki-tail`
+# Skill Design — Loki PoC（併入 `ck-observability-bridge` per ADR-0022）
 
-> **狀態**：design + PoC（不部署，等 CK_AaaP 採納 ADR-0020 Phase 1 擴範圍提案）
-> **規範源**：`docs/plans/adr-0020-phase1-extension-proposal.md` §3.F
+> **狀態**：design + PoC，**併入 ADR-0022 ck-observability-bridge 作為 Loki 部分藍圖**
+> **規範源**：`CK_AaaP#0022 ck-observability-bridge-skill`（已 proposed）
 > **規範**：`hermes-skill-contract-v2.md` 實作者指南
-> **Source of truth（未來）**：`CK_AaaP/docs/hermes-skills/ck-loki-tail/`
+> **Source of truth（移轉後）**：`CK_AaaP/platform/services/docs/hermes-skills/ck-observability-bridge/`
+
+## 0. 對齊聲明（2026-04-25 retro 後校準）
+
+本文件原名 `ck-loki-tail`，**重複** ADR-0022 `ck-observability-bridge` 的 Loki 子集。經 retro 校準：
+- ADR-0022 規範範圍更廣（Loki / Prometheus / Grafana / Alertmanager 4 服務 / 6+ tools）
+- 本文件本質為**其中 Loki 部分（obs_loki_query / obs_loki_errors / obs_loki_briefing）的具體實作藍圖**
+- 不另立新 skill；本檔 + PoC 移到 `ck-observability-bridge/` 子目錄供 ADR-0022 採納時參考
+
+依 taiwan.md 觀察者紀律：發現重複後 retract，不為了「自己的 plan 留下」而硬切新 skill。
 
 ## 1. 動機
 

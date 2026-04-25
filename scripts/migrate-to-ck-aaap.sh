@@ -27,13 +27,17 @@ MISSIVE="${CKPROJECT_ROOT}/CK_Missive"
 
 MODE="${1:-help}"
 
+# 2026-04-25 retro-2026-04-25.md §6.1 校準：
+# - 廢止 master-integration-plan-v2 移轉（PLATFORM_VISION.md 已是真相源，避免雙真相源）
+# - skill source 改放 platform/services/docs/hermes-skills/（ADR-0021/0022/0023 既有規範路徑）
+# - ck-loki-tail PoC 併入 ck-observability-bridge（ADR-0022 範圍更廣）
 declare -a MOVES_HERMES_TO_AAAP=(
-  "docs/plans/master-integration-plan-v2-2026-04-19.md|docs/plans/master-integration-plan-v2.md"
   "docs/plans/adr-0020-phase1-extension-proposal.md|docs/plans/adr-0020-phase1-extension-proposal.md"
-  "docs/plans/skill-ck-adr-query-design.md|docs/hermes-skills/ck-adr-query/references/design.md"
-  "docs/plans/skill-ck-loki-tail-design.md|docs/hermes-skills/ck-loki-tail/references/design.md"
-  "scripts/adr-query-poc.py|docs/hermes-skills/ck-adr-query/poc/adr-query-poc.py"
-  "scripts/loki-tail-poc.py|docs/hermes-skills/ck-loki-tail/poc/loki-tail-poc.py"
+  "docs/plans/retro-2026-04-25.md|docs/plans/retro-hermes-agent-2026-04-25.md"
+  "docs/plans/skill-ck-adr-query-design.md|platform/services/docs/hermes-skills/ck-adr-query/references/design.md"
+  "docs/plans/skill-ck-loki-tail-design.md|platform/services/docs/hermes-skills/ck-observability-bridge/references/loki-poc-design.md"
+  "scripts/adr-query-poc.py|platform/services/docs/hermes-skills/ck-adr-query/poc/adr-query-poc.py"
+  "scripts/loki-tail-poc.py|platform/services/docs/hermes-skills/ck-observability-bridge/poc/loki-tail-poc.py"
   "docs/plans/cron-prompts.md|runbooks/hermes-stack/cron-prompts.md"
   "docs/plans/crystal-seed-bootstrap.md|runbooks/crystal-seed/README.md"
   "docs/plans/soul-templates/meta.soul.md|runbooks/hermes-stack/SOUL.meta.md.template"
@@ -67,10 +71,10 @@ EOF
 
 ensure_dirs() {
   mkdir -p "${AAAP}/docs/plans"
-  mkdir -p "${AAAP}/docs/hermes-skills/ck-adr-query/poc"
-  mkdir -p "${AAAP}/docs/hermes-skills/ck-adr-query/references"
-  mkdir -p "${AAAP}/docs/hermes-skills/ck-loki-tail/poc"
-  mkdir -p "${AAAP}/docs/hermes-skills/ck-loki-tail/references"
+  mkdir -p "${AAAP}/platform/services/docs/hermes-skills/ck-adr-query/poc"
+  mkdir -p "${AAAP}/platform/services/docs/hermes-skills/ck-adr-query/references"
+  mkdir -p "${AAAP}/platform/services/docs/hermes-skills/ck-observability-bridge/poc"
+  mkdir -p "${AAAP}/platform/services/docs/hermes-skills/ck-observability-bridge/references"
   mkdir -p "${AAAP}/runbooks/crystal-seed"
   mkdir -p "${AAAP}/runbooks/soul-templates"
   mkdir -p "${AAAP}/runbooks/hermes-stack"

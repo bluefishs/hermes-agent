@@ -21,14 +21,14 @@ ADR-0020 Phase 1 原定「擴 4 個 bridge skill」。經本 session 評估：
 | 動作 | 原 | 擴 |
 |---|---|---|
 | **A** ck-missive-bridge v2.0 | ✅ 已部署 | ✅ 不變 |
-| **B** ck-showcase-bridge | 📋 規劃中 | ✅ 不變 |
-| **C** ck-observability-bridge | 📋 規劃中 | ✅ 不變 |
-| **D** ck-pilemgmt-bridge | 📋 規劃中 | ✅ 不變 |
-| **E** ck-adr-query skill（新） | — | ✅ **新增** — 跨 6 repo ADR 自然語言查詢 |
-| **F** ck-loki-tail skill（新） | — | ✅ **新增** — Meta cron 萃取近 24h ERROR |
+| **B** ck-showcase-bridge | 📋 ADR-0021 proposed | ✅ 不變 |
+| **C** ck-observability-bridge | 📋 ADR-0022 proposed | ✅ **不另立**；本提案 §3.F 改為**補強 ADR-0022 — 提供 Loki 子集 PoC + 5 條 noise 改良策略** |
+| **D** ck-pilemgmt-bridge | 📋 ADR-0023 proposed | ✅ 不變 |
+| **E** ck-adr-query skill（新） | — | ✅ **新增** — 跨 6 repo ADR 自然語言查詢（無對應既有 ADR）|
+| **F** ~~ck-loki-tail skill~~ → **補強 ADR-0022** | — | ✅ **修正**：併入 ADR-0022 而非另立（**2026-04-25 retro 後**） |
 | **G** unified-entry 路由（新） | — | ✅ **新增** — Open WebUI / Telegram / CLI 走同一 hermes-gateway |
 
-新增三項本身不違反 zero-cost 硬約束，全部本地。
+新增 E + G 兩項；F 改為補強既有 ADR-0022。全部本地，不違反 zero-cost 硬約束。
 
 ## 3. 三項新 skill 的「謙遜路由器」紀律
 
@@ -48,18 +48,23 @@ ADR-0020 Phase 1 原定「擴 4 個 bridge skill」。經本 session 評估：
 
 **Source of truth**：`CK_AaaP/adrs/REGISTRY.md`（自動產生）+ 各 repo `<root>/adrs/` 或 `docs/adr/`
 
-### F. ck-loki-tail
+### F. ~~ck-loki-tail~~ → 補強 ADR-0022 ck-observability-bridge
 
-**做什麼**：Meta 22:30 cron 呼叫 skill → 拉最近 24h Loki 訊息中 `level=ERROR` → 彙整成 briefing「今日 13 容器產生 N 個 ERROR，集中於 X 服務」
+**2026-04-25 retro 校準**：原提議 ck-loki-tail 為新 skill；重新讀 ADR-0022 後發現 ck-observability-bridge 已涵蓋 Loki + Prometheus + Grafana + Alertmanager（範圍更廣）。本節改為提供**ADR-0022 Loki 子集的具體實作藍圖**：
 
-**不做什麼**：
-- ❌ 不主動干預（不 auto-restart 容器、不 kill process）
-- ❌ 不解讀 ERROR 業務含義（fmt 了就交給使用者或對應 agent）
-- ❌ 不寫進 wiki 業務真相（業務真相錨定 Missive）
+**對應 ADR-0022 既有 tool**：`obs_loki_query` + `obs_loki_errors` + `obs_loki_briefing`
 
-**Tools**：
-- `loki_query_range(query: str, hours: int) -> list[entry]`
-- `loki_label_values(label: str) -> list[str]`
+**本提案補強內容**：
+- PoC 實證（`scripts/loki-tail-poc.py`）證明 Loki HTTP API 從 hermes-gateway 容器內可達（`host.docker.internal:13100`）
+- **真實 alarm 偵測**：6h window 5000 ERROR-pattern 中辨識 1 條 `ck_missive_postgres_dev` FK constraint violation
+- 揭露 noise 占比 99.4%（`ck-platform-node-exporter` metrics scrape）→ 提出 5 條 noise/假陽性改良策略：
+  1. 預設排除 `ck-platform-node-exporter`
+  2. LogQL `| level="error"` 用結構化 label 而非 text grep
+  3. Regex 加 negative lookahead 過濾 `success/registered`
+  4. `count_over_time` aggregations 取 hourly trend
+  5. 結果分「真 ERROR / warning / filtered noise」三段
+
+**併入位置**：`platform/services/docs/hermes-skills/ck-observability-bridge/{poc,references}/`
 
 ### G. unified-entry 路由
 
