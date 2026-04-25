@@ -112,11 +112,37 @@ python scripts/adr-query-poc.py collisions
 
 ## 6. 部署計畫（等 CK_AaaP 採納 ADR-0020 Phase 1 擴範圍提案後）
 
-1. `CK_AaaP` session 建 `CK_AaaP/docs/hermes-skills/ck-adr-query/`（source of truth）
+### 6.1 容器邊界考量（**重要**，2026-04-25 補充）
+
+Hermes runtime 在容器內，僅 mount `~/.hermes`（→ `/opt/data`）；**看不到** `D:/CKProject/CK_*/adrs/`。PoC 在 host 端跑 OK，但容器化後路徑不通。三條落地路徑：
+
+| Variant | 機制 | 優點 | 缺點 |
+|---|---|---|---|
+| **A** Mount D:/CKProject ro 進容器 | docker-compose.yml 加 `- D:/CKProject:/opt/ckproject:ro` | 即時最新；無 sync 滯後 | 改 compose（CK_AaaP session）；容器看到所有 repo 包含 secrets |
+| **B** Cron 萃取 ADR index JSON 進 wiki | host cron 30min run `adr-query-poc.py --json > ~/.hermes/profiles/meta/wiki/raw/adr-index.json`；skill 讀 JSON | 不改 compose；安全（只 export ADR markdown 內容，無 secrets）；snapshot 可追溯 | 30min stale；JSON schema 維護 |
+| **C** Skill 透過 hermes-gateway HTTP 呼叫 host 邊車服務 | host 端 Python http server (`:8645`) 包 PoC；skill 在容器內 `host.docker.internal:8645/api/adr/...` | 即時；無 sync 滯後；隔離清楚 | 多一個 host service 要管維護 |
+
+**推薦 Variant B**（30min stale 對 ADR query 完全可接受 — ADR 不會 30 分內變動 5 次）：
+
+1. CK_AaaP session 建 `CK_AaaP/scripts/adr-index-cron.sh`：
+   ```bash
+   #!/bin/sh
+   python /d/CKProject/hermes-agent/scripts/adr-query-poc.py --json-index \
+     > ~/.hermes/profiles/meta/wiki/raw/adr-index.json
+   ```
+2. host crontab：`*/30 * * * * /path/to/adr-index-cron.sh`
+3. Skill `tools.py` 讀 `/opt/data/profiles/meta/wiki/raw/adr-index.json`（容器內路徑）
+4. PoC 需擴 `--json-index` 命令輸出整個 index 為 single JSON
+
+### 6.2 部署步驟
+
+1. CK_AaaP session 建 `CK_AaaP/docs/hermes-skills/ck-adr-query/`（source of truth）
 2. 把本檔內容 + PoC 整合為 `SKILL.md` + `tools.py` + `install.sh`
-3. `install.sh` 複製到 `~/.hermes/skills/ck-adr-query/`
-4. 重啟 hermes-gateway → `/skills` 驗證
-5. 自然語言測試：`hermes chat -q "為何 Missive 用 pgvector 768D？"`
+3. PoC 擴 `--json-index` 命令（hermes-agent session 補完成）
+4. host cron 部署 30min ADR index 萃取
+5. `install.sh` 複製到 `~/.hermes/skills/ck-adr-query/`
+6. 重啟 hermes-gateway → `/skills` 驗證
+7. 自然語言測試：`hermes chat -q "為何 Missive 用 pgvector 768D？"`
 
 ## 7. 不在範圍
 
