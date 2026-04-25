@@ -61,8 +61,10 @@ fi
 # Ensure the main config file remains accessible to the hermes runtime user
 # even if it was edited on the host after initial ownership setup.
 if [ -f "$HERMES_HOME/config.yaml" ]; then
-    chown hermes:hermes "$HERMES_HOME/config.yaml"
-    chmod 640 "$HERMES_HOME/config.yaml"
+    # Bind-mounted volumes from Windows hosts and rootless Podman cannot chown/chmod;
+    # fall through gracefully (mirrors line 31 pattern). See upstream PR pending.
+    chown hermes:hermes "$HERMES_HOME/config.yaml" 2>/dev/null || true
+    chmod 640 "$HERMES_HOME/config.yaml" 2>/dev/null || true
 fi
 
 # SOUL.md
