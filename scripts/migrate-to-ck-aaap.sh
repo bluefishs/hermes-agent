@@ -45,6 +45,19 @@ declare -a MOVES_HERMES_TO_AAAP=(
   "docs/plans/soul-templates/lvrland.soul.md|runbooks/soul-templates/lvrland.soul.md"
   "docs/plans/soul-templates/pile.soul.md|runbooks/soul-templates/pile.soul.md"
   "docs/plans/soul-templates/README.md|runbooks/soul-templates/README.md"
+  # 2026-04-26 B1 Sprint 4 skeletons
+  "docs/plans/ck-observability-bridge-skeleton/README.md|platform/services/docs/hermes-skills/ck-observability-bridge/README.md"
+  "docs/plans/ck-observability-bridge-skeleton/SKILL.md|platform/services/docs/hermes-skills/ck-observability-bridge/SKILL.md"
+  "docs/plans/ck-observability-bridge-skeleton/tools.py|platform/services/docs/hermes-skills/ck-observability-bridge/tools.py"
+  "docs/plans/ck-adr-query-skeleton/README.md|platform/services/docs/hermes-skills/ck-adr-query/README.md"
+  "docs/plans/ck-adr-query-skeleton/SKILL.md|platform/services/docs/hermes-skills/ck-adr-query/SKILL.md"
+  "docs/plans/ck-adr-query-skeleton/tools.py|platform/services/docs/hermes-skills/ck-adr-query/tools.py"
+  "docs/plans/ck-pilemgmt-bridge-stub/README.md|platform/services/docs/hermes-skills/ck-pilemgmt-bridge/README.md"
+  "docs/plans/ck-pilemgmt-bridge-stub/SKILL.md|platform/services/docs/hermes-skills/ck-pilemgmt-bridge/SKILL.md"
+  "docs/plans/ck-pilemgmt-bridge-stub/tools.py|platform/services/docs/hermes-skills/ck-pilemgmt-bridge/tools.py"
+  "docs/plans/ck-showcase-bridge-stub/README.md|platform/services/docs/hermes-skills/ck-showcase-bridge/README.md"
+  "docs/plans/ck-showcase-bridge-stub/SKILL.md|platform/services/docs/hermes-skills/ck-showcase-bridge/SKILL.md"
+  "docs/plans/ck-showcase-bridge-stub/tools.py|platform/services/docs/hermes-skills/ck-showcase-bridge/tools.py"
 )
 
 HERMES_TO_MISSIVE_SOUL="docs/plans/soul-templates/missive.soul.md|SOUL.md"
