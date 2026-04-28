@@ -14,6 +14,7 @@ import json
 import os
 import time
 from pathlib import Path
+from typing import Any
 
 # ── Environment ────────────────────────────────────────────
 INDEX_PATH = Path(os.environ.get(
@@ -24,16 +25,17 @@ STALE_DAYS = 30
 
 
 # ── Helpers ────────────────────────────────────────────────
-def _load_index() -> dict | None:
+def _load_index() -> dict[str, Any] | None:
     if not INDEX_PATH.exists():
         return None
     try:
-        return json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+        data: dict[str, Any] = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+        return data
     except (OSError, json.JSONDecodeError):
         return None
 
 
-def _stale_warn(index: dict) -> str | None:
+def _stale_warn(index: dict[str, Any]) -> str | None:
     """Return warning message if index is older than STALE_DAYS, else None."""
     try:
         mtime = INDEX_PATH.stat().st_mtime
@@ -48,11 +50,11 @@ def _stale_warn(index: dict) -> str | None:
     return None
 
 
-def _err(code: str, msg: str, **extra) -> str:
+def _err(code: str, msg: str, **extra: Any) -> str:
     return json.dumps({"error": code, "message": msg, **extra}, ensure_ascii=False)
 
 
-def _wrap(payload: dict, index: dict) -> str:
+def _wrap(payload: dict[str, Any], index: dict[str, Any]) -> str:
     warning = _stale_warn(index)
     if warning:
         payload["_warning"] = warning
@@ -76,7 +78,7 @@ def adr_search(query: str, repo: str = "", lifecycle: str = "") -> str:
                     path=str(INDEX_PATH))
 
     needle = query.lower()
-    hits: list[dict] = []
+    hits: list[dict[str, Any]] = []
     for adr in index.get("adrs", []):
         if repo and adr["repo"] != repo:
             continue
@@ -205,7 +207,7 @@ def _check_index() -> bool:
 
 
 # ── Hermes skill loader entry ──────────────────────────────
-def register_all(registry) -> int:
+def register_all(registry: Any) -> int:
     """依 hermes-skill-contract-v2 §2.2 register_all 契約註冊 5 tools."""
     count = 0
     for fn, desc in [

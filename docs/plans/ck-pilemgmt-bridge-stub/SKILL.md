@@ -1,56 +1,91 @@
 ---
 name: ck-pilemgmt-bridge
-version: 0.1.0-stub
-description: PileMgmt 業務查詢 bridge（樁管理：健康度 / NL query / celery 狀態）
+version: 0.1.0
+description: CK_PileMgmt 樁管理系統橋接 — health 檢測、NL 查詢、Celery 狀態。
 author: CK Platform Team
 license: MIT
-
-prerequisites:
-  env_vars:
-    - PILE_BASE_URL
-    - PILE_API_TOKEN
-  optional_env_vars:
-    - PILE_TIMEOUT_S
-    - PILE_CELERY_FLOWER_URL
-  services:
-    - url: ${PILE_BASE_URL}/api/health
-      name: ck_pilemgmt-backend
-
 metadata:
   hermes:
-    tags: [ck, pilemgmt, domain-bridge]
-    homepage: http://localhost:8004
-    related_skills: [ck-missive-bridge, ck-observability-bridge]
-    min_version: "0.10.0"
+    tags: [CK, PileMgmt, Piles, Celery, Geospatial]
+    homepage: https://pile.cksurvey.tw
+prerequisites:
+  env_vars: [PILE_BASE_URL, PILE_API_TOKEN]
 ---
 
-# ck-pilemgmt-bridge
+# CK PileMgmt Bridge — Hermes Skill v0.1
 
-依 ADR-0023 規範。樁管理 (PileMgmt) domain agent 的 Hermes 自然語言入口。
+把 CK_PileMgmt 樁管理子系統透過 Hermes 暴露為自然語言查詢入口。首版只做 3 個最小 tool，
+PileMgmt 補 `/api/ai/query` 端點後可啟 `pile_query_sync`。
 
-**狀態**：stub-only skeleton（B1 Sprint Step 3）。3 tools 簽名與 frontmatter 已就位；
-handler 待 CK_AaaP 採納 + PileMgmt 側加 `/api/ai/query` 端點後填實作。
+> **本 skill 為 source**（ADR-0023 規範）；實作檔 `tools.py` / `install.sh` / `tests/`
+> 於 hermes-agent session 撰寫。
+>
+> **注意**：2026-04 當前 PileMgmt 無 `/api/ai/query` endpoint；`pile_query_sync` 必要時先
+> 停用（fallback tool_spec 只含 health + celery_status 二 tool），待 PileMgmt 補後再啟。
 
-## Tools 清單
+## 架構
 
-| Tool | 狀態 | ADR-0023 |
+```
+Hermes Agent
+  └─ ck-pilemgmt-bridge skill
+       ├─ tools.py         動態註冊或靜態 2-3 tool
+       ├─ tool_spec.json   3 tools 契約
+       └─ SKILL.md         prompt context
+              │
+              ▼
+       CK_PileMgmt backend（ck_pilemgmt-backend :8004）
+```
+
+## 部署
+
+```bash
+bash install.sh [~/.hermes/skills/ck-pilemgmt-bridge]
+```
+
+## 環境變數（對應 hermes-stack/.env.example § 5D，Phase 1 前置）
+
+| 變數 | 必要 | 預設 | 說明 |
+|---|---|---|---|
+| `PILE_BASE_URL` | ✅ | `http://host.docker.internal:8004` | PileMgmt API |
+| `PILE_API_TOKEN` | ✅ | — | Bearer token |
+| `PILE_TIMEOUT_S` | ❌ | `30` | |
+| `PILE_CELERY_FLOWER_URL` | ❌ | — | Flower UI fallback（若 PileMgmt 無 /api/celery/status）|
+
+## 3 Tools（ADR-0023）
+
+| Hermes Tool | PileMgmt 端點 | 用途 |
 |---|---|---|
-| `pile_health` | ⏸ stub | Tool 1 |
-| `pile_query_sync` | ⏸ stub（待 PileMgmt 加端點）| Tool 2 |
-| `pile_celery_status` | ⏸ stub | Tool 3 |
+| `pile_health` | `POST /api/health/detail` | 5 container + DB + Celery worker 活性 |
+| `pile_query_sync` | `POST /api/ai/query`（**PileMgmt 需新補**）| NL 案件 / 樁位 / 驗收查詢 |
+| `pile_celery_status` | `POST /api/celery/status` 或 Flower | Active / scheduled / reserved tasks |
 
-## 紀律（taiwan.md 觀察者）
+## 使用時機
 
-- ✅ 唯讀；不修改 PileMgmt DB
-- ✅ Bearer token via PILE_API_TOKEN
-- ❌ 不杜撰；端點 4xx 回清楚錯誤
-- ❌ 不解讀業務含義 → 業務含義由使用者 / PileMgmt agent 自身解讀
+**命中**：
+- 「PileMgmt 現在健康嗎」
+- 「PM-2026-012 的樁位狀態」（需 query_sync）
+- 「PileMgmt celery 在跑什麼」
+- 「這週未驗收樁數」（需 query_sync）
 
-## 環境變數
+**不命中**：
+- 業務文件 / 公文 → `missive_*`
+- 觀測日誌 / 指標 → `obs_*`
+- 治理查詢 → `showcase_*`
 
-| 變數 | 必要 | 預設 |
+## 名稱空間 / 錯誤處理
+
+- 所有 tool 一律 `pile_` 前綴
+- 4xx / 5xx / timeout 處理同 ADR-0018 通用 fallback ladder
+- **空間查詢（PostGIS WKT）暫不入首版**（複雜度高，Phase 2 另 ADR）
+
+## 版本紀錄
+
+| 版本 | 日期 | 變更 |
 |---|---|---|
-| `PILE_BASE_URL` | ✅ | `http://host.docker.internal:8004` |
-| `PILE_API_TOKEN` | ✅ | — |
-| `PILE_TIMEOUT_S` | ❌ | `30` |
-| `PILE_CELERY_FLOWER_URL` | ❌ | — |
+| 0.1.0 | 2026-04-19 | ADR-0023 後 skill source；tools.py 待 hermes-agent session |
+
+## 相關 ADR
+
+- `CK_AaaP#0023` — 本 skill 契約規範
+- `CK_AaaP#0020` — 平臺化總綱 Phase 1 四 bridge 之一
+- `CK_AaaP#0018` — skill 契約 v2

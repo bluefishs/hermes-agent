@@ -1,0 +1,133 @@
+{
+  "toolset": "ck_observability",
+  "description": "Bridge to CK platform observability stack (Loki/Prometheus/Grafana/Alertmanager). Natural-language log queries, metric ranges, dashboard URLs, alert silences, container health, active alerts.",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "obs_loki_query",
+      "description": "Loki LogQL range query. skill 可由 intent 翻譯 selector（例如 container / project / job label）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "selector": { "type": "string", "description": "LogQL selector，例如 {container=\"ck_missive_backend\"}" },
+          "window": { "type": "string", "enum": ["30m", "1h", "6h", "24h"], "default": "1h" },
+          "filter": { "type": "string", "description": "text regex 再過濾" },
+          "limit": { "type": "integer", "default": 50 }
+        },
+        "required": ["selector"]
+      },
+      "http": {
+        "method": "GET",
+        "url": "${OBS_LOKI_URL}/loki/api/v1/query_range",
+        "timeout_seconds": 45
+      },
+      "response": { "success_path": "data.result", "error_path": "message" }
+    },
+    {
+      "name": "obs_prom_query",
+      "description": "Prometheus PromQL range query with summary（min/max/avg/trend）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "window": { "type": "string", "default": "1h" },
+          "step": { "type": "string", "default": "15s" }
+        },
+        "required": ["query"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${OBS_PROMETHEUS_URL}/api/v1/query_range",
+        "timeout_seconds": 45
+      },
+      "response": { "success_path": "data.result", "error_path": "error" }
+    },
+    {
+      "name": "obs_grafana_dashboard_url",
+      "description": "產生特定 dashboard + variable 的深連結（不代跑 query）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "dashboard_id": { "type": "string" },
+          "dashboard_name": { "type": "string" },
+          "variables": { "type": "object" }
+        }
+      },
+      "http": {
+        "method": "GET",
+        "url": "${OBS_GRAFANA_URL}/api/dashboards/uid/{dashboard_id}",
+        "headers": { "Authorization": "Bearer ${OBS_GRAFANA_TOKEN}" },
+        "timeout_seconds": 15
+      },
+      "response": { "success_path": "dashboard.url", "error_path": "message" }
+    },
+    {
+      "name": "obs_alertmanager_silence",
+      "description": "臨時 silence 某 alert（危險動作）。SAFE_MODE=true 時 mode=run 回 dry-run。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "matchers": { "type": "array" },
+          "duration": { "type": "string", "default": "1h" },
+          "comment": { "type": "string" },
+          "mode": { "type": "string", "enum": ["query", "run"], "default": "query" }
+        },
+        "required": ["matchers", "mode"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${OBS_ALERTMANAGER_URL}/api/v2/silences",
+        "headers": {
+          "X-Safe-Mode": "${OBS_SAFE_MODE:-true}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "silenceID", "error_path": "error" },
+      "safety": {
+        "retry": false,
+        "note": "silence 絕不自動重試；SAFE_MODE 時 mode=run 退為 dry-run"
+      }
+    },
+    {
+      "name": "obs_container_health",
+      "description": "列某 project_prefix 下所有 container 狀態（from Prometheus container_* metrics）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_prefix": { "type": "string", "description": "e.g. ck_missive_ / ck_pilemgmt_ / ck_tunnel_" }
+        },
+        "required": ["project_prefix"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${OBS_PROMETHEUS_URL}/api/v1/query",
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "data.result" }
+    },
+    {
+      "name": "obs_alert_active",
+      "description": "列當前 firing / pending alerts（跨專案）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_filter": { "type": "string" },
+          "severity": { "type": "string", "enum": ["critical", "warning", "info"] }
+        }
+      },
+      "http": {
+        "method": "GET",
+        "url": "${OBS_ALERTMANAGER_URL}/api/v2/alerts",
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "", "error_path": "error" }
+    }
+  ],
+  "fallback_policy": {
+    "order": ["dynamic_manifest", "static_tool_spec", "human_readable_error"],
+    "no_hallucination": true,
+    "max_http_retry_5xx": 1,
+    "retry_backoff_s": 2,
+    "silence_no_retry": true
+  }
+}

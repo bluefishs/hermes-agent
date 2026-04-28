@@ -1,0 +1,229 @@
+{
+  "toolset": "ck_showcase",
+  "description": "Governance bridge to CK_Showcase (8 managed projects): skills sync, agents, security scans, ADR map, managed projects, SSO status, governance health, platform metrics.",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "showcase_managed_projects_list",
+      "description": "列出所有受管專案（8 個）與基本資訊。Demo priority 1.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "include_retired": { "type": "boolean", "default": false },
+          "channel": { "type": "string", "enum": ["telegram", "discord", "cli", "web"] },
+          "session_id": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/projects",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json",
+          "X-Channel": "${channel:-cli}"
+        },
+        "body": {
+          "include_retired": "${include_retired:-false}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "projects", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_adr_map_query",
+      "description": "查詢某受管專案的 ADR 知識地圖（狀態分布 + 最近 N 條）。Demo priority 2.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" },
+          "status_filter": { "type": "string", "enum": ["proposed", "accepted", "superseded"] },
+          "limit": { "type": "integer", "default": 10 },
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        },
+        "required": ["project_id"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/adr-map/query",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "${project_id}",
+          "status_filter": "${status_filter}",
+          "limit": "${limit:-10}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "recent", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_governance_health",
+      "description": "跨專案治理健康度摘要（可選指定 project_id；不給回全平臺彙總）。Demo priority 3.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" },
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/governance-health",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "${project_id}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "by_project", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_platform_metrics",
+      "description": "平臺級指標（ADR 總數 / skills / agents / security 7/30/90 天趨勢）。Demo priority 4.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "window": { "type": "string", "enum": ["7d", "30d", "90d"], "default": "30d" },
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/platform-metrics",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "window": "${window:-30d}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "metrics", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_skills_sync_status",
+      "description": "查詢某受管專案 Skills 同步狀態（上次 pull 時間 / 數量 / drift 清單）。Phase 1 後置。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" },
+          "include_drift": { "type": "boolean", "default": true }
+        },
+        "required": ["project_id"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/skills/sync-status",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "${project_id}",
+          "include_drift": "${include_drift:-true}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "drift", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_agents_list",
+      "description": "列出某受管專案的所有 agents 與狀態。Phase 1 後置。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" },
+          "status_filter": { "type": "string", "enum": ["active", "all"], "default": "active" }
+        },
+        "required": ["project_id"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/agents/list",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "${project_id}",
+          "status_filter": "${status_filter:-active}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "agents", "error_path": "detail" }
+    },
+    {
+      "name": "showcase_security_scan_run",
+      "description": "觸發或查詢 OWASP 安全掃描。SHOWCASE_SAFE_MODE=true 時 mode=run 改回 dry-run 預估。Phase 1 後置，有 safety lock。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" },
+          "mode": { "type": "string", "enum": ["query", "run"], "default": "query" },
+          "scan_type": { "type": "string", "enum": ["quick", "full"], "default": "quick" }
+        },
+        "required": ["project_id", "mode"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/security/scan",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json",
+          "X-Safe-Mode": "${SHOWCASE_SAFE_MODE:-true}"
+        },
+        "body": {
+          "project_id": "${project_id}",
+          "mode": "${mode}",
+          "scan_type": "${scan_type:-quick}"
+        },
+        "timeout_seconds": 60
+      },
+      "response": { "success_path": "findings", "error_path": "detail" },
+      "safety": {
+        "retry": false,
+        "note": "security_scan_run 絕不自動重試；mode=run 受 SHOWCASE_SAFE_MODE 保護"
+      }
+    },
+    {
+      "name": "showcase_sso_status",
+      "description": "查詢某受管專案 SSO / Auth middleware 狀態（provider / active users）。2026-04 Showcase SSO 尚未實作，先回 enabled=false。Phase 1 後置。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "string" }
+        },
+        "required": ["project_id"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${SHOWCASE_BASE_URL}/api/system-config/sso-status",
+        "headers": {
+          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "${project_id}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "enabled", "error_path": "detail" }
+    }
+  ],
+  "manifest_endpoint": "${SHOWCASE_BASE_URL}/api/hermes/tools-manifest",
+  "fallback_policy": {
+    "order": ["dynamic_manifest", "static_tool_spec", "human_readable_error"],
+    "no_hallucination": true,
+    "max_http_retry_5xx": 1,
+    "retry_backoff_s": 1
+  }
+}

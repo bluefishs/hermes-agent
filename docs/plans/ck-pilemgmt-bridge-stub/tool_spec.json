@@ -1,0 +1,91 @@
+{
+  "toolset": "ck_pilemgmt",
+  "description": "Bridge to CK_PileMgmt (pile management). Health check, natural-language query, celery task status.",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "pile_health",
+      "description": "列 PileMgmt 5 個 container 健康度 + DB 連線 + Celery worker 活性。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "POST",
+        "url": "${PILE_BASE_URL}/api/health/detail",
+        "headers": {
+          "Authorization": "Bearer ${PILE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {},
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "", "error_path": "detail" }
+    },
+    {
+      "name": "pile_query_sync",
+      "description": "自然語言查詢 PileMgmt 案件 / 樁位 / 驗收狀態（需 PileMgmt 新增 /api/ai/query endpoint；未補前此 tool 回 not_implemented）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        },
+        "required": ["question"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${PILE_BASE_URL}/api/ai/query",
+        "headers": {
+          "Authorization": "Bearer ${PILE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "question": "${question}",
+          "channel": "${channel:-cli}",
+          "session_id": "${session_id}"
+        },
+        "timeout_seconds": 60
+      },
+      "response": { "success_path": "answer", "sources_path": "sources", "error_path": "detail" },
+      "status": "awaiting_backend_endpoint"
+    },
+    {
+      "name": "pile_celery_status",
+      "description": "Celery job 狀態聚合（active / scheduled / reserved tasks）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "queue_filter": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "POST",
+        "url": "${PILE_BASE_URL}/api/celery/status",
+        "headers": {
+          "Authorization": "Bearer ${PILE_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "queue_filter": "${queue_filter}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "active", "error_path": "detail" },
+      "fallback": {
+        "url": "${PILE_CELERY_FLOWER_URL}/api/tasks",
+        "note": "if primary endpoint unavailable, try Flower"
+      }
+    }
+  ],
+  "fallback_policy": {
+    "order": ["dynamic_manifest", "static_tool_spec", "human_readable_error"],
+    "no_hallucination": true,
+    "max_http_retry_5xx": 1,
+    "retry_backoff_s": 1
+  }
+}
