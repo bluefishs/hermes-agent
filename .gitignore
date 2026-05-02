@@ -69,3 +69,9 @@ mini-swe-agent/
 .nix-stamps/
 result
 website/static/api/skills-index.json
+
+# CK fork additions (per docs/plans/commit-organization.md)
+# Claude Code session state
+.claude/
+# Curl test scratch payload (used by docs/plans/skill-helper-template/)
+docs/plans/_demo_payload.json

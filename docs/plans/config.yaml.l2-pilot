@@ -1,0 +1,55 @@
+# Hermes gateway config — L2 pilot（先加 ck-pilemgmt-bridge 試水溫）
+# 來源：runtime config 2026-04-30 snapshot + ck-pilemgmt-bridge 解註
+
+# ── LLM 模型 ──────────────────────────────────────────────
+# 路徑 X：Ollama 升主、Groq 降 fallback
+model:
+  provider: custom
+  model: qwen2.5:7b-ctx64k
+  base_url: http://ck-ollama:11434/v1
+  api_key_env: OLLAMA_API_KEY
+  context_length: 65536
+
+fallback_model:
+  model: llama-3.1-8b-instant
+  provider: custom
+  base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  context_length: 128000
+
+# ── 工具集 ─────────────────────────────────────────────────
+toolsets:
+  enabled:
+    - core
+    - code
+  disabled:
+    - web
+
+# ── Gateway 平台 ───────────────────────────────────────────
+gateway:
+  platforms:
+    api_server:
+      enabled: true
+    telegram:
+      enabled: true
+
+# ── Display ────────────────────────────────────────────────
+display:
+  skin: default
+  background_process_notifications: result
+
+# ── Skills ─────────────────────────────────────────────────
+# 2026-04-30：L2 pilot — 加 ck-pilemgmt-bridge 試水溫
+# 若 register_all 載入成功（看 docker logs），其他 3 個 bridge 同樣機制部署
+skills:
+  enabled:
+    - ck-missive-bridge
+    - ck-pilemgmt-bridge      # ← 新增（L2 pilot）
+    - llm-wiki
+  config:
+    wiki:
+      path: /opt/data/profiles/meta/wiki
+
+# ── Messaging ──────────────────────────────────────────────
+messaging:
+  cwd: /opt/data/workspace

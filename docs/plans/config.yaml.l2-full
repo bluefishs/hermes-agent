@@ -1,0 +1,57 @@
+# Hermes gateway config — L2 完整啟用（5 個 ck-* bridge）
+# 來源：runtime config 2026-04-30 + L2 full deployment
+
+# ── LLM 模型 ──────────────────────────────────────────────
+model:
+  provider: custom
+  model: qwen2.5:7b-ctx64k
+  base_url: http://ck-ollama:11434/v1
+  api_key_env: OLLAMA_API_KEY
+  context_length: 65536
+
+fallback_model:
+  model: llama-3.1-8b-instant
+  provider: custom
+  base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  context_length: 128000
+
+# ── 工具集 ─────────────────────────────────────────────────
+toolsets:
+  enabled:
+    - core
+    - code
+  disabled:
+    - web
+
+# ── Gateway 平台 ───────────────────────────────────────────
+gateway:
+  platforms:
+    api_server:
+      enabled: true
+    telegram:
+      enabled: true
+
+# ── Display ────────────────────────────────────────────────
+display:
+  skin: default
+  background_process_notifications: result
+
+# ── Skills ─────────────────────────────────────────────────
+# 2026-04-30：L2 full deployment — 5 個 ck-* bridge 全啟用
+skills:
+  enabled:
+    - ck-missive-bridge        # 公文 / 案件 / KG / RAG
+    - ck-pilemgmt-bridge       # 樁位 / Celery
+    - ck-observability-bridge  # Loki / Prom / Grafana
+    - ck-showcase-bridge       # 治理 / ADR / skill registry
+    - ck-lvrland-bridge        # 房價 / 估價 / 行政區
+    - ck-adr-query             # ADR 跨 repo 查詢
+    - llm-wiki                 # meta wiki 萃取
+  config:
+    wiki:
+      path: /opt/data/profiles/meta/wiki
+
+# ── Messaging ──────────────────────────────────────────────
+messaging:
+  cwd: /opt/data/workspace
