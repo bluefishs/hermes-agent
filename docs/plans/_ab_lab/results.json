@@ -1,0 +1,35 @@
+running A_minimal...
+running B_soul_plus_1skill...
+running C_full_simulated...
+[
+  {
+    "label": "A_minimal",
+    "sys_chars": 325,
+    "prompt_tokens_actual": 115,
+    "output_tokens": 15,
+    "elapsed_s": 5.5,
+    "has_tool_call_xml": true,
+    "has_simplified_zh": false,
+    "content_preview": "<tool_call>{\"name\": \"missive_health\", \"arguments\": {}}</tool_call>"
+  },
+  {
+    "label": "B_soul_plus_1skill",
+    "sys_chars": 7363,
+    "prompt_tokens_actual": 3645,
+    "output_tokens": 15,
+    "elapsed_s": 4.4,
+    "has_tool_call_xml": true,
+    "has_simplified_zh": false,
+    "content_preview": "<tool_call>{\"name\": \"missive_health\", \"arguments\": {}}</tool_call>"
+  },
+  {
+    "label": "C_full_simulated",
+    "sys_chars": 27227,
+    "prompt_tokens_actual": 12990,
+    "output_tokens": 15,
+    "elapsed_s": 9.0,
+    "has_tool_call_xml": true,
+    "has_simplified_zh": false,
+    "content_preview": "<tool_call>{\"name\": \"missive_health\", \"arguments\": {}}</tool_call>"
+  }
+]

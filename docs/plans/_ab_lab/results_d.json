@@ -1,0 +1,59 @@
+running D1_minimal...
+running D2_soul_only...
+running D3_soul_plus_skill...
+[
+  {
+    "label": "D1_minimal",
+    "model": "qwen2.5:7b-ctx64k",
+    "sys_chars": 25,
+    "prompt_tokens": 213,
+    "output_tokens": 16,
+    "elapsed_s": 6.4,
+    "openai_tool_calls": [
+      {
+        "name": "missive_health",
+        "args": "{}"
+      }
+    ],
+    "tool_call_count": 1,
+    "has_tool_call_xml_in_content": false,
+    "has_simplified_zh": false,
+    "content_preview": ""
+  },
+  {
+    "label": "D2_soul_only",
+    "model": "qwen2.5:7b-ctx64k",
+    "sys_chars": 3071,
+    "prompt_tokens": 1868,
+    "output_tokens": 16,
+    "elapsed_s": 6.1,
+    "openai_tool_calls": [
+      {
+        "name": "missive_health",
+        "args": "{}"
+      }
+    ],
+    "tool_call_count": 1,
+    "has_tool_call_xml_in_content": false,
+    "has_simplified_zh": false,
+    "content_preview": ""
+  },
+  {
+    "label": "D3_soul_plus_skill",
+    "model": "qwen2.5:7b-ctx64k",
+    "sys_chars": 7063,
+    "prompt_tokens": 3743,
+    "output_tokens": 16,
+    "elapsed_s": 6.8,
+    "openai_tool_calls": [
+      {
+        "name": "missive_health",
+        "args": "{}"
+      }
+    ],
+    "tool_call_count": 1,
+    "has_tool_call_xml_in_content": false,
+    "has_simplified_zh": false,
+    "content_preview": ""
+  }
+]
