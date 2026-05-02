@@ -1,0 +1,88 @@
+{
+  "toolset": "ck_lvrland",
+  "description": "Bridge to CK_lvrland_Webmap (real-estate registration / estimation). Health check, NL query (Groq+Ollama), price-volume trends.",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "lvrland_health",
+      "description": "列 LvrLand backend container + DB + Ollama 連線活性。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        }
+      },
+      "http": {
+        "method": "GET",
+        "url": "${LVRLAND_BASE_URL}/api/health",
+        "headers": {
+          "Authorization": "Bearer ${LVRLAND_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "timeout_seconds": 10
+      },
+      "response": { "success_path": "", "error_path": "detail" }
+    },
+    {
+      "name": "lvrland_query_sync",
+      "description": "自然語言查詢 LvrLand 估價/實價登錄資料；命中地圖關鍵字 + 行政區時回 map_highlight tool_call 結構，否則回 RAG text_response。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "channel": { "type": "string" },
+          "session_id": { "type": "string" }
+        },
+        "required": ["question"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${LVRLAND_BASE_URL}/api/v1/ai/query",
+        "headers": {
+          "Authorization": "Bearer ${LVRLAND_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "question": "${question}"
+        },
+        "timeout_seconds": 60
+      },
+      "response": { "success_path": "content", "error_path": "detail" }
+    },
+    {
+      "name": "lvrland_price_trends",
+      "description": "行政區房價/成交量時序資料（avg_prices / volumes / building_type_breakdown）。",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "districts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "行政區名單，例：[\"中壢區\", \"桃園區\"]"
+          }
+        },
+        "required": ["districts"]
+      },
+      "http": {
+        "method": "POST",
+        "url": "${LVRLAND_BASE_URL}/api/v1/analytics/price-volume-trends",
+        "headers": {
+          "Authorization": "Bearer ${LVRLAND_API_TOKEN}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "districts": "${districts}"
+        },
+        "timeout_seconds": 30
+      },
+      "response": { "success_path": "", "error_path": "detail" }
+    }
+  ],
+  "fallback_policy": {
+    "order": ["dynamic_manifest", "static_tool_spec", "human_readable_error"],
+    "no_hallucination": true,
+    "max_http_retry_5xx": 1,
+    "retry_backoff_s": 1
+  }
+}
