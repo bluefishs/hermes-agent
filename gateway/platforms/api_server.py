@@ -474,6 +474,50 @@ else:
     security_headers_middleware = None  # type: ignore[assignment]
 
 
+def _metric_path_label(raw_path: str) -> str:
+    """Bucket a raw URL into the low-cardinality `path` label for metrics."""
+    if raw_path.startswith("/v1/chat/completions"):
+        return "chat"
+    if raw_path.startswith("/v1/responses"):
+        return "responses"
+    if raw_path.startswith("/v1/runs"):
+        return "runs"
+    if raw_path.startswith("/v1/models"):
+        return "models"
+    if raw_path.startswith("/v1/capabilities"):
+        return "capabilities"
+    if raw_path.startswith("/api/jobs"):
+        return "jobs"
+    if raw_path == "/metrics":
+        return "metrics"
+    if raw_path.startswith("/health") or raw_path == "/v1/health":
+        return "health"
+    return "other"
+
+
+if AIOHTTP_AVAILABLE:
+    @web.middleware
+    async def metrics_middleware(request, handler):
+        """Time every request and emit ck_hermes_http_* counters/histograms.
+
+        Stays cheap when prometheus_client is missing (context manager no-ops).
+        Path label is bucketed to avoid cardinality blowup on dynamic ids.
+        """
+        from gateway.metrics import time_http_request
+
+        path_label = _metric_path_label(request.path)
+        with time_http_request(path_label, method=request.method) as ctx:
+            try:
+                response = await handler(request)
+            except web.HTTPException as exc:
+                ctx["status"] = exc.status
+                raise
+            ctx["status"] = getattr(response, "status", 200)
+            return response
+else:
+    metrics_middleware = None  # type: ignore[assignment]
+
+
 class _IdempotencyCache:
     """In-memory idempotency cache with TTL and basic LRU semantics."""
     def __init__(self, max_items: int = 1000, ttl_seconds: int = 300):
@@ -860,6 +904,16 @@ class APIServerAdapter(BasePlatformAdapter):
     async def _handle_health(self, request: "web.Request") -> "web.Response":
         """GET /health — simple health check."""
         return web.json_response({"status": "ok", "platform": "hermes-agent"})
+
+    async def _handle_metrics(self, request: "web.Request") -> "web.Response":
+        """GET /metrics — Prometheus exposition. No auth (intra-cluster scrape)."""
+        from gateway.metrics import render_metrics
+
+        body, content_type = render_metrics()
+        # content_type may include "; version=…"; aiohttp wants the bare type.
+        return web.Response(
+            body=body, content_type=content_type.split(";")[0].strip(), charset="utf-8"
+        )
 
     async def _handle_health_detailed(self, request: "web.Request") -> "web.Response":
         """GET /health/detailed — rich status for cross-container dashboard probing.
@@ -3281,12 +3335,26 @@ class APIServerAdapter(BasePlatformAdapter):
             return False
 
         try:
-            mws = [mw for mw in (cors_middleware, body_limit_middleware, security_headers_middleware) if mw is not None]
+            from gateway.rate_limit import make_middleware as _make_rate_limit_mw
+
+            rate_limit_mw = _make_rate_limit_mw()
+            mws = [
+                mw
+                for mw in (
+                    metrics_middleware,
+                    rate_limit_mw,
+                    cors_middleware,
+                    body_limit_middleware,
+                    security_headers_middleware,
+                )
+                if mw is not None
+            ]
             self._app = web.Application(middlewares=mws, client_max_size=MAX_REQUEST_BYTES)
             self._app["api_server_adapter"] = self
             self._app.router.add_get("/health", self._handle_health)
             self._app.router.add_get("/health/detailed", self._handle_health_detailed)
             self._app.router.add_get("/v1/health", self._handle_health)
+            self._app.router.add_get("/metrics", self._handle_metrics)
             self._app.router.add_get("/v1/models", self._handle_models)
             self._app.router.add_get("/v1/capabilities", self._handle_capabilities)
             self._app.router.add_post("/v1/chat/completions", self._handle_chat_completions)
