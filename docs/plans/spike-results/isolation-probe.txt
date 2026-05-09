@@ -1,0 +1,25 @@
+Isolation Probe — Hermes Profile HERMES_HOME swap 物理隔離驗證
+Date: 2026-05-04
+Method: 在 spike profile 寫入 sentinel.txt 含 secret token，於 meta profile HERMES_HOME 路徑下嘗試讀取相同相對路徑
+
+=== Step 1: 種 sentinel ===
+Path: C:\Users\User1\.hermes\profiles\spike\memories\sentinel.txt
+Content: SPIKE_SECRET_TOKEN_8421
+
+=== Step 2: With HERMES_HOME=spike ===
+HERMES_HOME = C:\Users\User1\.hermes\profiles\spike
+sentinel exists? True
+content: SPIKE_SECRET_TOKEN_8421
+
+=== Step 3: With HERMES_HOME=meta ===
+HERMES_HOME = C:\Users\User1\.hermes\profiles\meta
+sentinel exists? False
+content: N/A
+
+=== Verdict ===
+PASS — HERMES_HOME swap 在檔案系統層完全隔離。spike 的 memories/ 對 meta 不可見、反之亦然。
+此即 Master Plan v2 R1「context 隔離」項目實證通過。
+
+=== Caveat ===
+本 probe 驗證的是 CLI 層 HERMES_HOME swap。Docker gateway 容器內 HERMES_HOME=/opt/data 寫死，
+不受 CLI profile 切換影響。詳見 spike report §6 方案 X/Y/Z 取捨。

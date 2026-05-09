@@ -1,0 +1,8 @@
+step,latency_ms
+create_spike_from_default,5127.3
+switch_to_spike_run1,1672.5
+switch_to_meta_run1,1147.2
+switch_to_spike_run2,1473.8
+switch_to_meta_run2,1275.3
+switch_to_spike_run3,1298.7
+switch_to_meta_run3,1176.8
