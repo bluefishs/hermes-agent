@@ -134,11 +134,21 @@ D:\CKProject\hermes-agent   →  QW-3（Missive bridge E2E test）
 | C-3.2 | ck-showcase-bridge native tool（3 高 ROI action） | hermes-agent | ✅ | 3 tool / 36 tests |
 | C-3.3 | ck-pilemgmt-bridge native tool（2 implemented action） | hermes-agent | ✅ | 2 tool / 29 tests，ai_query 跳過（後端未實作）|
 | Wiki | 4 bridge 落地總結 | hermes-agent | ✅ | [[wiki workflow-c3-phase1-bridges-complete-2026-05-16]] |
-| Commit | 推送 11 檔案 | hermes-agent | ⬜ | 待使用者授權 |
+| Commit | 推送 11 檔案 | hermes-agent | ✅ | `3664a24cb` docs / `7451331f2` feat 已 push fork/main |
+| Verify | `scripts/verify-bridges.py` 部署 sanity helper | hermes-agent | ✅ | `faeb1615c`（ahead fork/main） |
+| QW-3 e2e | mock-baseline（aiohttp test server）| hermes-agent | ✅ | `8a2f09b4d` 4 tests / 3.4s（ahead fork/main） |
 | .env | 4 base url 注入 hermes-stack | CK_AaaP | ⬜ | |
 | SKILL.md | 4 bridge frontmatter 加 toolsets | 4 repo | ⬜ | 跨 session |
-| QW-3 e2e | 取代 prompt-template baseline | hermes-agent | ⬜ | 等上述完成 |
+| QW-3 full e2e | gateway + LLM + skill 全鏈路 | hermes-agent | ⬜ | 等 SKILL.md 更新 + Anthropic credit |
 | QW-1 | Prometheus scrape `hermes-gateway` | CK_AaaP | ⬜ | |
 | QW-2 | Missive `DEVELOPMENT_MODE` 預設反轉 | CK_Missive | ⬜ | |
 
-**hermes-agent 端 ADR-0020 Phase 1 代碼面 100% 完成**；P0-1 紅色風險於本 session 範圍內 closed。剩餘為跨 session 配置 / SKILL.md 更新 / e2e 驗證。
+**hermes-agent 端 ADR-0020 Phase 1 代碼面 + 部署驗證 helper + mock e2e 全部完成**；P0-1 紅色風險於本 session 範圍內 closed。剩餘為跨 session 配置 / SKILL.md 更新 / 真實 LLM e2e。
+
+### 本 session 累積（2026-05-16）
+
+- 11 個 native tool（4 個 bridge）
+- 141 個單元測試 + 4 個 mock e2e = 145 個測試
+- 5 個 plan / wiki 文件
+- 1 個 ops verify helper
+- 4 個 commit（2 已 push fork/main，2 ahead 待批次授權）
