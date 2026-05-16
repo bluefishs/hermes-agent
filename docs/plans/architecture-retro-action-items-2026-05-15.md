@@ -151,4 +151,21 @@ D:\CKProject\hermes-agent   →  QW-3（Missive bridge E2E test）
 - 141 個單元測試 + 4 個 mock e2e = 145 個測試
 - 5 個 plan / wiki 文件
 - 1 個 ops verify helper
-- 4 個 commit（2 已 push fork/main，2 ahead 待批次授權）
+- 1 份 30-min integration demo cookbook
+- 5 commit + 1 merge commit（772 commits 整合，全部 push fork/main）
+- 上游 sync 2026-05-09 → 2026-05-16（771 commits，conflicts 2，CK fork 全部存活）
+
+### 整合效應呈現（user 提問回應）
+
+工程鋼樑已建，user-facing channel 由 4 個跨 session 配置瓶頸阻擋：
+
+| # | 瓶頸 | 工時 | session |
+|---|---|---|---|
+| 1 | 4 個 SKILL.md frontmatter 加 `toolsets:` | 5 min × 4 | 各 bridge 對應 repo |
+| 2 | hermes-stack/.env 注入 4 個 `*_BASE_URL` | 5 min | CK_AaaP |
+| 3 | `~/.hermes/profiles/meta/SOUL.md` 套 template | 5 min | CK_AaaP |
+| 4 | LLM 推理層（Anthropic credit / Ollama fallback） | 配置工 | CK_AaaP |
+
+執行 cookbook：[`docs/plans/hermes-integration-demo-path-2026-05-16.md`](hermes-integration-demo-path-2026-05-16.md)
+
+Phase 1（30 分鐘）走 ck-missive-bridge 端到端：對 `http://localhost:9119` 對話「幫我看 Missive 還好嗎」→ LLM 觸發 `missive_health` tool → aiohttp 真打 `/health` → 結果繁中回 user。**這就是 hermes-agent 投入 8 個月後第一次落入 user value 鏈路**。
