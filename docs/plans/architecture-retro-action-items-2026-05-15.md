@@ -222,3 +222,52 @@ Phase 1（30 分鐘）走 ck-missive-bridge 端到端：對 `http://localhost:91
 - 不寫 Phase 2 / Phase 3 規劃
 - 不開新 ADR（除非為 Sprint A 驗證撰寫 ADR-0021）
 - 不升級 native tool α 範式
+
+---
+
+## 2026-05-18 Sprint A 100% 收尾更新（當日連續完成）
+
+### 各項落地狀態
+
+| 階段 | 任務 | session | 狀態 | 驗證證據 |
+|---|---|---|---|---|
+| QW-1 / A-2 | prometheus + Grafana hermes-gateway | CK_AaaP | ✅ | commit `f1ceffb` |
+| QW-2 / A-3 | Missive `DEVELOPMENT_MODE` 反 False | hermes-agent edit | 🟡 | working tree（CK_Missive session 接手 commit） |
+| QW-3 / A-1 | missive bridge end-to-end Step 1-5 | CK_AaaP | ✅ | Step 6 待 Anthropic credit |
+| c | 4 STALE 文件 last_updated 更新 | hermes-agent | ✅ | drift = 0 STALE |
+| b（選 2） | ADR-0030 加 Phase 1.5 CONTINUATION-EXEMPT | hermes-agent edit | ✅ | lint = 0 violations；ADR Registry 重生對齊 |
+| 跨 repo | hermes-agent push fork/main | hermes-agent | ✅ | `367e2ff6f` |
+
+### ADR-0030 Phase 1.5 設計重點
+
+加新 marker `ADR-0030-CONTINUATION-EXEMPT`，嚴格欄位：
+
+```
+# ADR-0030-CONTINUATION-EXEMPT: <reason>; trigger=<A|B|C>; owner=<session>; sunset=<YYYY-MM-DD>
+```
+
+- 必填四項 + sunset ≤ commit 後 6 月
+- sunset 過期 → lint 硬 FAIL（不是 WARNING）
+- 缺欄位 → 立即 FAIL
+- 限制：補位既有業務修復，不得新業務啟動
+- 治理：CK_AaaP session 每月檢視
+
+→ 例外通道有出口，無永久居留。
+
+### 跨 repo uncommitted（待對應 session 接手 commit）
+
+| Repo | 檔案 | session |
+|---|---|---|
+| CK_AaaP | `adrs/0030-...md` + `scripts/pgvector-schema-lint.sh` + `adrs/REGISTRY.md` | CK_AaaP |
+| CK_PileMgmt | `backend/alembic/versions/20260505d_pgvector_alignment.py` | CK_PileMgmt |
+| CK_Missive | `backend/app/core/config.py` + `backend/main.py` + 300+ 既存 uncommitted | CK_Missive（重）|
+
+### Sprint B 啟動條件
+
+Sprint A 已收尾，Sprint B 接力指引見：
+
+```
+D:/CKProject/hermes-agent/docs/plans/sprint-b-cross-session-relay-2026-05-18.md
+```
+
+含 B-1（Missive N+1）/ B-2（embedding env 化）/ B-3（Alertmanager SPOF）/ B-4（hermes-agent e2e 升級）/ B-5（其餘 3 bridge enablement）五段照表執行。

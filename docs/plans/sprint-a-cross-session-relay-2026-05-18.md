@@ -5,6 +5,15 @@
 > 設計目標：每一節貼絕對路徑 + 切到對應 session 即可進行；hermes-agent session 無權跨目錄 commit
 > 預估總工時：**6 小時**（三段可平行）
 
+## 本檔分發狀態
+
+| 來源 | 狀態 |
+|---|---|
+| 本機 filesystem `D:/CKProject/hermes-agent/docs/plans/sprint-a-cross-session-relay-2026-05-18.md` | ✅ **已就緒**（commit `367e2ff6f` 本地落地）|
+| fork remote `bluefishs/hermes-agent` main | ⬜ 待 push（被 pre-push enforcement 阻斷，**與本 commit 無關**：跨 repo ADR registry STALE + pgvector schema FAIL + 4 STALE CLAUDE.md/MEMORY.md）|
+
+**操作員執行 Sprint A 不需要 fork/main 同步**——直接從本機 `D:/` 讀檔即可。push 修通後再 sync 是分開的作業。
+
 ---
 
 ## Sprint A 任務矩陣
