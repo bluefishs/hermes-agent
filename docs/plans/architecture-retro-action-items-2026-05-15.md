@@ -169,3 +169,56 @@ D:\CKProject\hermes-agent   →  QW-3（Missive bridge E2E test）
 執行 cookbook：[`docs/plans/hermes-integration-demo-path-2026-05-16.md`](hermes-integration-demo-path-2026-05-16.md)
 
 Phase 1（30 分鐘）走 ck-missive-bridge 端到端：對 `http://localhost:9119` 對話「幫我看 Missive 還好嗎」→ LLM 觸發 `missive_health` tool → aiohttp 真打 `/health` → 結果繁中回 user。**這就是 hermes-agent 投入 8 個月後第一次落入 user value 鏈路**。
+
+---
+
+## 2026-05-18 第二次覆盤差異更新
+
+> 使用者於 hermes-agent session 第二次請求架構覆盤 + 授權「依前述規劃辦理」。完整新覆盤見 `~/.hermes/profiles/meta/wiki/concepts/architecture-retro-2026-05-18.md`。
+
+### 3 天進度盤點
+
+| Sprint | 項目 | 05-15 → 05-18 | 備註 |
+|---|---|---|---|
+| A | QW-1（prometheus 加 hermes scrape） | ⬜ → ⬜ | 跨 CK_AaaP session |
+| A | QW-2（Missive DEVELOPMENT_MODE 反轉） | ⬜ → ⬜ | 跨 CK_Missive session |
+| A | QW-3（gateway → Missive E2E） | ⬜ → 🟡 | mock baseline 落地（commit `8a2f09b4d`，4 tests / 3.4s）；full LLM-driven 待跨 session 配置 |
+| B | B-1（ck-missive-bridge 真實 tool function） | ⬜ → ✅ | commit `7451331f2`（2 tool / 34 tests） |
+| B | B-2（Alertmanager secondary receiver） | ⬜ → ⬜ | 跨 CK_AaaP session |
+| B | B-3（Missive N+1 三大熱點） | ⬜ → ⬜ | 跨 CK_Missive session |
+| B | B-4（embedding Semaphore/LRU env 化） | ⬜ → ⬜ | 跨 CK_Missive session |
+| C | C-1（pgvector HNSW benchmark） | ⬜ → ⬜ | 跨 CK_Missive session |
+| C | C-2（PostgreSQL RLS） | ⬜ → ⬜ | 跨 CK_Missive session |
+| C | C-3（其餘 3 bridge skill） | ⬜ → ✅ | commit `7451331f2`（observability 4+42 / showcase 3+36 / pilemgmt 2+29） |
+| C | C-4（lvrland producer 決策） | ⬜ → ⬜ | 跨 root session |
+| C | C-5（ADR 編號碰撞 pre-commit hook） | ⬜ → ⬜ | 跨 CK_AaaP session |
+| C | C-6（CONVENTIONS §7 例外條款） | ⬜ → ⬜ | 跨 CK_AaaP session |
+
+**進度**：13 項中 3 項 ✅ / 1 項 🟡 / 9 項 ⬜，全部 ⬜ 都卡跨 session。
+
+### 跨 session 接力指引（重點交付）
+
+`D:/CKProject/hermes-agent/docs/plans/sprint-a-cross-session-relay-2026-05-18.md`
+
+含 A-1（30 min cookbook） / A-2（prometheus + Grafana 4h） / A-3（Missive config 反轉 1h）三段照表執行指引，每段都標明：
+- 啟動 session 的 `cd` 命令
+- 貼給 Claude 的 prompt 模板
+- 預期變更檔案
+- 通過標準
+- 卡關決策樹
+
+### 新層次風險（敘事 vs 代碼鴻溝）
+
+| 敘事真相 | 代碼真相 |
+|---|---|
+| 「ADR-0020 Phase 1 closed」 | ✅ 工程，但**無一次 LLM-driven 端到端跑通** |
+| 「4 bridge 已就緒」 | ✅ tools 註冊，**但 4 個 SKILL.md frontmatter `toolsets:` 從未更新** |
+| 「Hermes 為人機介面」 | hermes-stack/.env **未注入任何 `*_BASE_URL`** |
+
+**這是組織風險，不是技術風險**。下個衝刺**不要再開 Phase 2 / Phase 3**，先把 A-1 真實跑通。
+
+### 不在範圍（明確排除）
+
+- 不寫 Phase 2 / Phase 3 規劃
+- 不開新 ADR（除非為 Sprint A 驗證撰寫 ADR-0021）
+- 不升級 native tool α 範式
