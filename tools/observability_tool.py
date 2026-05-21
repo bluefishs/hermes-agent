@@ -12,14 +12,14 @@ Each backend has an independent env var. A tool is exposed via the registry
 only when its backend env is set, so partial deployments (e.g. Prom + Loki
 only) Just Work.
 
-Env vars:
+Env vars (aligned with ck-observability-bridge SKILL.md, ADR-0022):
 
-- ``OBSERVABILITY_PROMETHEUS_URL``
-- ``OBSERVABILITY_LOKI_URL``
-- ``OBSERVABILITY_GRAFANA_URL`` (+ optional ``OBSERVABILITY_GRAFANA_USER`` /
-  ``OBSERVABILITY_GRAFANA_PASS`` for basic auth)
-- ``OBSERVABILITY_ALERTMANAGER_URL``
-- ``OBSERVABILITY_TIMEOUT_SECONDS`` (optional, default 15)
+- ``OBS_PROMETHEUS_URL``
+- ``OBS_LOKI_URL``
+- ``OBS_GRAFANA_URL`` (+ optional ``OBS_GRAFANA_USER`` /
+  ``OBS_GRAFANA_PASS`` for basic auth)
+- ``OBS_ALERTMANAGER_URL``
+- ``OBS_TIMEOUT_S`` (optional, default 15)
 
 Plain HTTP is allowed (native tools are not gated by hermes-runtime tirith
 plain-HTTP blocks; the hermes-stack docker-compose ships internal
@@ -46,7 +46,7 @@ _DEFAULT_TIMEOUT = 15.0
 
 def _get_timeout() -> float:
     try:
-        return float(os.getenv("OBSERVABILITY_TIMEOUT_SECONDS", _DEFAULT_TIMEOUT))
+        return float(os.getenv("OBS_TIMEOUT_S", _DEFAULT_TIMEOUT))
     except ValueError:
         return _DEFAULT_TIMEOUT
 
@@ -56,8 +56,8 @@ def _base(env_name: str) -> str:
 
 
 def _grafana_basic_auth_header() -> Optional[str]:
-    user = os.getenv("OBSERVABILITY_GRAFANA_USER", "")
-    password = os.getenv("OBSERVABILITY_GRAFANA_PASS", "")
+    user = os.getenv("OBS_GRAFANA_USER", "")
+    password = os.getenv("OBS_GRAFANA_PASS", "")
     if not (user and password):
         return None
     import base64
@@ -101,9 +101,9 @@ async def _async_http_get(
 
 
 async def _async_prometheus_query(query: str, time: Optional[str] = None) -> Dict[str, Any]:
-    base = _base("OBSERVABILITY_PROMETHEUS_URL")
+    base = _base("OBS_PROMETHEUS_URL")
     if not base:
-        raise RuntimeError("OBSERVABILITY_PROMETHEUS_URL is not configured")
+        raise RuntimeError("OBS_PROMETHEUS_URL is not configured")
     params: Dict[str, Any] = {"query": query}
     if time:
         params["time"] = time
@@ -117,9 +117,9 @@ async def _async_loki_query_range(
     limit: Optional[int] = None,
     step: Optional[str] = None,
 ) -> Dict[str, Any]:
-    base = _base("OBSERVABILITY_LOKI_URL")
+    base = _base("OBS_LOKI_URL")
     if not base:
-        raise RuntimeError("OBSERVABILITY_LOKI_URL is not configured")
+        raise RuntimeError("OBS_LOKI_URL is not configured")
     params: Dict[str, Any] = {"query": query}
     if start is not None:
         params["start"] = start
@@ -133,9 +133,9 @@ async def _async_loki_query_range(
 
 
 async def _async_grafana_health() -> Dict[str, Any]:
-    base = _base("OBSERVABILITY_GRAFANA_URL")
+    base = _base("OBS_GRAFANA_URL")
     if not base:
-        raise RuntimeError("OBSERVABILITY_GRAFANA_URL is not configured")
+        raise RuntimeError("OBS_GRAFANA_URL is not configured")
     return await _async_http_get(
         f"{base}/api/health", _common_headers(_grafana_basic_auth_header())
     )
@@ -145,9 +145,9 @@ async def _async_alerts_active(
     active: Optional[bool] = None,
     silenced: Optional[bool] = None,
 ) -> Dict[str, Any]:
-    base = _base("OBSERVABILITY_ALERTMANAGER_URL")
+    base = _base("OBS_ALERTMANAGER_URL")
     if not base:
-        raise RuntimeError("OBSERVABILITY_ALERTMANAGER_URL is not configured")
+        raise RuntimeError("OBS_ALERTMANAGER_URL is not configured")
     params: Dict[str, Any] = {}
     if active is not None:
         params["active"] = "true" if active else "false"
@@ -240,19 +240,19 @@ def _handle_alerts_active(args: dict, **kw) -> str:
 
 
 def _check_prom() -> bool:
-    return bool(os.getenv("OBSERVABILITY_PROMETHEUS_URL"))
+    return bool(os.getenv("OBS_PROMETHEUS_URL"))
 
 
 def _check_loki() -> bool:
-    return bool(os.getenv("OBSERVABILITY_LOKI_URL"))
+    return bool(os.getenv("OBS_LOKI_URL"))
 
 
 def _check_grafana() -> bool:
-    return bool(os.getenv("OBSERVABILITY_GRAFANA_URL"))
+    return bool(os.getenv("OBS_GRAFANA_URL"))
 
 
 def _check_alert() -> bool:
-    return bool(os.getenv("OBSERVABILITY_ALERTMANAGER_URL"))
+    return bool(os.getenv("OBS_ALERTMANAGER_URL"))
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +367,7 @@ registry.register(
     schema=PROMETHEUS_QUERY_SCHEMA,
     handler=_handle_prometheus_query,
     check_fn=_check_prom,
-    requires_env=["OBSERVABILITY_PROMETHEUS_URL"],
+    requires_env=["OBS_PROMETHEUS_URL"],
     emoji="📊",
 )
 
@@ -377,7 +377,7 @@ registry.register(
     schema=LOKI_QUERY_RANGE_SCHEMA,
     handler=_handle_loki_query_range,
     check_fn=_check_loki,
-    requires_env=["OBSERVABILITY_LOKI_URL"],
+    requires_env=["OBS_LOKI_URL"],
     emoji="📜",
 )
 
@@ -387,7 +387,7 @@ registry.register(
     schema=GRAFANA_HEALTH_SCHEMA,
     handler=_handle_grafana_health,
     check_fn=_check_grafana,
-    requires_env=["OBSERVABILITY_GRAFANA_URL"],
+    requires_env=["OBS_GRAFANA_URL"],
     emoji="📈",
 )
 
@@ -397,6 +397,6 @@ registry.register(
     schema=ALERTS_ACTIVE_SCHEMA,
     handler=_handle_alerts_active,
     check_fn=_check_alert,
-    requires_env=["OBSERVABILITY_ALERTMANAGER_URL"],
+    requires_env=["OBS_ALERTMANAGER_URL"],
     emoji="🚨",
 )

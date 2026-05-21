@@ -39,15 +39,15 @@ from tools.registry import registry
 class TestConfigHelpers:
     def test_base_empty_when_unset(self):
         with patch.dict(os.environ, {}, clear=True):
-            assert _base("OBSERVABILITY_PROMETHEUS_URL") == ""
+            assert _base("OBS_PROMETHEUS_URL") == ""
 
     def test_base_strips_trailing_slash(self):
         with patch.dict(
             os.environ,
-            {"OBSERVABILITY_PROMETHEUS_URL": "http://host.docker.internal:19090/"},
+            {"OBS_PROMETHEUS_URL": "http://host.docker.internal:19090/"},
             clear=True,
         ):
-            assert _base("OBSERVABILITY_PROMETHEUS_URL") == (
+            assert _base("OBS_PROMETHEUS_URL") == (
                 "http://host.docker.internal:19090"
             )
 
@@ -57,13 +57,13 @@ class TestConfigHelpers:
 
     def test_timeout_override(self):
         with patch.dict(
-            os.environ, {"OBSERVABILITY_TIMEOUT_SECONDS": "8"}, clear=True
+            os.environ, {"OBS_TIMEOUT_S": "8"}, clear=True
         ):
             assert _get_timeout() == 8.0
 
     def test_timeout_invalid_falls_back(self):
         with patch.dict(
-            os.environ, {"OBSERVABILITY_TIMEOUT_SECONDS": "weird"}, clear=True
+            os.environ, {"OBS_TIMEOUT_S": "weird"}, clear=True
         ):
             assert _get_timeout() == 15.0
 
@@ -75,7 +75,7 @@ class TestGrafanaBasicAuth:
 
     def test_none_when_user_only(self):
         with patch.dict(
-            os.environ, {"OBSERVABILITY_GRAFANA_USER": "u"}, clear=True
+            os.environ, {"OBS_GRAFANA_USER": "u"}, clear=True
         ):
             assert _grafana_basic_auth_header() is None
 
@@ -83,8 +83,8 @@ class TestGrafanaBasicAuth:
         with patch.dict(
             os.environ,
             {
-                "OBSERVABILITY_GRAFANA_USER": "u",
-                "OBSERVABILITY_GRAFANA_PASS": "p",
+                "OBS_GRAFANA_USER": "u",
+                "OBS_GRAFANA_PASS": "p",
             },
             clear=True,
         ):
@@ -115,7 +115,7 @@ class TestCheckFunctions:
     def test_prom_enabled(self):
         with patch.dict(
             os.environ,
-            {"OBSERVABILITY_PROMETHEUS_URL": "http://p:19090"},
+            {"OBS_PROMETHEUS_URL": "http://p:19090"},
             clear=True,
         ):
             assert _check_prom() is True
@@ -126,7 +126,7 @@ class TestCheckFunctions:
 
     def test_loki_enabled(self):
         with patch.dict(
-            os.environ, {"OBSERVABILITY_LOKI_URL": "http://l:13100"}, clear=True
+            os.environ, {"OBS_LOKI_URL": "http://l:13100"}, clear=True
         ):
             assert _check_loki() is True
 
@@ -137,7 +137,7 @@ class TestCheckFunctions:
     def test_grafana_enabled(self):
         with patch.dict(
             os.environ,
-            {"OBSERVABILITY_GRAFANA_URL": "http://g:13000"},
+            {"OBS_GRAFANA_URL": "http://g:13000"},
             clear=True,
         ):
             assert _check_grafana() is True
@@ -149,7 +149,7 @@ class TestCheckFunctions:
     def test_alert_enabled(self):
         with patch.dict(
             os.environ,
-            {"OBSERVABILITY_ALERTMANAGER_URL": "http://a:19093"},
+            {"OBS_ALERTMANAGER_URL": "http://a:19093"},
             clear=True,
         ):
             assert _check_alert() is True
@@ -338,16 +338,16 @@ class TestRegistry:
 
     def test_required_envs_split_per_tool(self):
         assert registry._tools["prometheus_query"].requires_env == [
-            "OBSERVABILITY_PROMETHEUS_URL"
+            "OBS_PROMETHEUS_URL"
         ]
         assert registry._tools["loki_query_range"].requires_env == [
-            "OBSERVABILITY_LOKI_URL"
+            "OBS_LOKI_URL"
         ]
         assert registry._tools["grafana_health"].requires_env == [
-            "OBSERVABILITY_GRAFANA_URL"
+            "OBS_GRAFANA_URL"
         ]
         assert registry._tools["alerts_active"].requires_env == [
-            "OBSERVABILITY_ALERTMANAGER_URL"
+            "OBS_ALERTMANAGER_URL"
         ]
 
     def test_check_fns_split_per_tool(self):
