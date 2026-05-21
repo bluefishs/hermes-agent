@@ -43,7 +43,7 @@ Modes:
   --apply           — 真的執行 (會中斷 hermes-gateway ~30s)
   --rollback        — 切回 meta（default）profile + restart
 
-Source: D:/CKProject/hermes-agent/docs/plans/skill-helper-template/phase15-activate.sh
+Source: D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/phase15-activate.sh
 EOF
     exit 1
 fi

@@ -78,35 +78,35 @@ mkdir -p runbooks/crystal-seed
 mkdir -p runbooks/soul-templates
 
 # 2. 複製跨 repo 計畫（不 git mv，因跨 repo 用 cp）
-cp ../hermes-agent/docs/plans/master-integration-plan-v2-2026-04-19.md \
+cp ../CK_Hermes/docs/plans/master-integration-plan-v2-2026-04-19.md \
    docs/plans/master-integration-plan-v2.md
 
-cp ../hermes-agent/docs/plans/adr-0020-phase1-extension-proposal.md \
+cp ../CK_Hermes/docs/plans/adr-0020-phase1-extension-proposal.md \
    docs/plans/adr-0020-phase1-extension-proposal.md
 
 # 3. 複製 skill source of truth
-cp ../hermes-agent/docs/plans/skill-ck-adr-query-design.md \
+cp ../CK_Hermes/docs/plans/skill-ck-adr-query-design.md \
    docs/hermes-skills/ck-adr-query/references/design.md
 
-cp ../hermes-agent/scripts/adr-query-poc.py \
+cp ../CK_Hermes/scripts/adr-query-poc.py \
    docs/hermes-skills/ck-adr-query/poc/adr-query-poc.py
 
 # 4. 複製 hermes-stack 資產
-cp ../hermes-agent/docs/plans/cron-prompts.md \
+cp ../CK_Hermes/docs/plans/cron-prompts.md \
    runbooks/hermes-stack/cron-prompts.md
 
-cp ../hermes-agent/docs/plans/crystal-seed-bootstrap.md \
+cp ../CK_Hermes/docs/plans/crystal-seed-bootstrap.md \
    runbooks/crystal-seed/README.md
 
 # 5. 複製 SOUL templates
-cp ../hermes-agent/docs/plans/soul-templates/meta.soul.md \
+cp ../CK_Hermes/docs/plans/soul-templates/meta.soul.md \
    runbooks/hermes-stack/SOUL.meta.md.template
 
-cp ../hermes-agent/docs/plans/soul-templates/showcase.soul.md \
+cp ../CK_Hermes/docs/plans/soul-templates/showcase.soul.md \
    runbooks/soul-templates/showcase.soul.md
-cp ../hermes-agent/docs/plans/soul-templates/lvrland.soul.md \
+cp ../CK_Hermes/docs/plans/soul-templates/lvrland.soul.md \
    runbooks/soul-templates/lvrland.soul.md
-cp ../hermes-agent/docs/plans/soul-templates/pile.soul.md \
+cp ../CK_Hermes/docs/plans/soul-templates/pile.soul.md \
    runbooks/soul-templates/pile.soul.md
 
 # missive.soul.md 屬 CK_Missive session（寫到 CK_Missive/SOUL.md）
@@ -136,7 +136,7 @@ hermes-agent originals preserved during 2-week dual-write window."
 
 ```bash
 cd D:/CKProject/CK_Missive
-cp ../hermes-agent/docs/plans/soul-templates/missive.soul.md SOUL.md
+cp ../CK_Hermes/docs/plans/soul-templates/missive.soul.md SOUL.md
 
 # 編輯 SOUL.md 以符合 CK_Missive 真實 persona（Muse-like 業務 agent）
 # Commit
@@ -151,7 +151,7 @@ git commit -m "feat(soul): adopt missive agent SOUL canonical"
 由 **hermes-agent session** 執行：
 
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 
 # 1. 在 hermes-agent 副本頂端加 deprecation banner
 for f in docs/plans/master-integration-plan-v2-2026-04-19.md \
@@ -190,7 +190,7 @@ git push fork main
 由 **hermes-agent session** 執行（**等使用者 2026-05-09 之後明確授權**）：
 
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 
 # 1. 刪除已移轉的檔案
 git rm docs/plans/master-integration-plan-v2-2026-04-19.md

@@ -13,7 +13,7 @@
 ## 檢查指令（~30 秒）
 
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 
 # 1. 抓新 tag
 git fetch origin --tags

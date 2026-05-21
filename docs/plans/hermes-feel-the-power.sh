@@ -184,7 +184,7 @@ cd D:/CKProject/CK_AaaP
 
 # A.1 採納 4 個 bridge skill source（observability/showcase/pilemgmt 已有；補 lvrland）
 mkdir -p platform/services/docs/hermes-skills/ck-lvrland-bridge
-cp ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/{SKILL.md,tool_spec.json,README.md,install.sh,tools.py} \
+cp ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/{SKILL.md,tool_spec.json,README.md,install.sh,tools.py} \
    platform/services/docs/hermes-skills/ck-lvrland-bridge/
 
 # A.2 部署到 runtime（hermes_data volume 內 /opt/data/skills/）
@@ -208,7 +208,7 @@ docker compose -f runbooks/hermes-stack/docker-compose.yml restart hermes-gatewa
 │ Step B — SOUL 升級（C.1 選項 1 精準版）                    │
 └────────────────────────────────────────────────────────────┘
 
-bash ../hermes-agent/docs/plans/unblock-soul-c1.sh step1
+bash ../CK_Hermes/docs/plans/unblock-soul-c1.sh step1
 
 # 切回 hermes-agent session：
 bash docs/plans/unblock-soul-c1.sh step2

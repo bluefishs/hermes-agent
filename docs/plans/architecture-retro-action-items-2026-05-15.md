@@ -61,10 +61,10 @@
 # Sprint A 平行三 session
 D:\CKProject\CK_AaaP        →  QW-1（prometheus + grafana 面板）
 D:\CKProject\CK_Missive     →  QW-2（config.py 反轉預設）
-D:\CKProject\hermes-agent   →  QW-3（Missive bridge E2E test）
+D:\CKProject\CK_Hermes   →  QW-3（Missive bridge E2E test）
 ```
 
-進入各 session 後請使用者貼此檔絕對路徑 `D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.md`，Claude 會自動讀此檔與 wiki 概念頁取得完整脈絡。
+進入各 session 後請使用者貼此檔絕對路徑 `D:\CKProject\CK_Hermes\docs\plans\architecture-retro-action-items-2026-05-15.md`，Claude 會自動讀此檔與 wiki 概念頁取得完整脈絡。
 
 ---
 
@@ -81,7 +81,7 @@ D:\CKProject\hermes-agent   →  QW-3（Missive bridge E2E test）
 - Wiki 概念：`~/.hermes/profiles/meta/wiki/concepts/architecture-retro-2026-05-15.md`
 - ADR-0020：`D:/CKProject/CK_AaaP/adrs/0020-aaap-platform-with-hermes-control-plane.md`
 - CONVENTIONS：`D:/CKProject/CK_AaaP/CONVENTIONS.md`
-- 跨 repo plan 雜散：`D:/CKProject/hermes-agent/docs/plans/cross-repo/`
+- 跨 repo plan 雜散：`D:/CKProject/CK_Hermes/docs/plans/cross-repo/`
 
 ---
 
@@ -198,7 +198,7 @@ Phase 1（30 分鐘）走 ck-missive-bridge 端到端：對 `http://localhost:91
 
 ### 跨 session 接力指引（重點交付）
 
-`D:/CKProject/hermes-agent/docs/plans/sprint-a-cross-session-relay-2026-05-18.md`
+`D:/CKProject/CK_Hermes/docs/plans/sprint-a-cross-session-relay-2026-05-18.md`
 
 含 A-1（30 min cookbook） / A-2（prometheus + Grafana 4h） / A-3（Missive config 反轉 1h）三段照表執行指引，每段都標明：
 - 啟動 session 的 `cd` 命令
@@ -267,7 +267,7 @@ Phase 1（30 分鐘）走 ck-missive-bridge 端到端：對 `http://localhost:91
 Sprint A 已收尾，Sprint B 接力指引見：
 
 ```
-D:/CKProject/hermes-agent/docs/plans/sprint-b-cross-session-relay-2026-05-18.md
+D:/CKProject/CK_Hermes/docs/plans/sprint-b-cross-session-relay-2026-05-18.md
 ```
 
 含 B-1（Missive N+1）/ B-2（embedding env 化）/ B-3（Alertmanager SPOF）/ B-4（hermes-agent e2e 升級）/ B-5（其餘 3 bridge enablement）五段照表執行。

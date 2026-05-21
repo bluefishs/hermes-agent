@@ -9,7 +9,7 @@
 
 | 來源 | 狀態 |
 |---|---|
-| 本機 filesystem `D:/CKProject/hermes-agent/docs/plans/sprint-b-cross-session-relay-2026-05-18.md` | ✅ 已就緒 |
+| 本機 filesystem `D:/CKProject/CK_Hermes/docs/plans/sprint-b-cross-session-relay-2026-05-18.md` | ✅ 已就緒 |
 | fork remote `bluefishs/hermes-agent` main | ✅ 待本 commit push |
 
 ## Sprint A 已收尾狀態速覽
@@ -65,7 +65,7 @@ claude
 貼路徑：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
+請依 D:\CKProject\CK_Hermes\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
 B-1 段執行：補 reminder_service.py / document/core.py / erp/expense_invoice.py 三大 N+1 熱點 selectinload。
 ```
 
@@ -102,7 +102,7 @@ claude
 貼路徑：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
+請依 D:\CKProject\CK_Hermes\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
 B-2 段執行：embedding pipeline Semaphore(5) 與 LRU 500 改 env 控制。
 ```
 
@@ -135,7 +135,7 @@ claude
 貼路徑：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
+請依 D:\CKProject\CK_Hermes\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
 B-3 段執行：Alertmanager 加 Telegram bot secondary receiver，解 25 條 alert 全打單一 webhook SPOF。
 ```
 
@@ -170,14 +170,14 @@ B-4 需 LLM 推理層真實跑通。當前狀態：
 ### Session 啟動
 
 ```powershell
-cd D:\CKProject\hermes-agent
+cd D:\CKProject\CK_Hermes
 claude
 ```
 
 貼路徑：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
+請依 D:\CKProject\CK_Hermes\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
 B-4 段執行：tests/e2e/test_missive_bridge_e2e.py 升級 mock → full LLM-driven。
 若 Anthropic credit 不可用，先用 Ollama gemma fallback 驗證可行性。
 ```
@@ -221,7 +221,7 @@ claude
 貼路徑：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
+請依 D:\CKProject\CK_Hermes\docs\plans\sprint-b-cross-session-relay-2026-05-18.md
 B-5 段執行：hermes-stack/.env 補 observability/showcase/pile 3 個 BASE_URL，並協同 3 個 repo session 更新 SKILL.md frontmatter。
 ```
 
@@ -255,7 +255,7 @@ B-5 段執行：hermes-stack/.env 補 observability/showcase/pile 3 個 BASE_URL
 ### 驗證
 
 ```bash
-python D:/CKProject/hermes-agent/scripts/verify-bridges.py
+python D:/CKProject/CK_Hermes/scripts/verify-bridges.py
 ```
 
 預期：7 probe 全 OK（missive + observability 4 + showcase + pile = 7）
@@ -271,7 +271,7 @@ python D:/CKProject/hermes-agent/scripts/verify-bridges.py
 跑通 Sprint B 各項後，請於對應 session 回填進度到：
 
 ```
-D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.md
+D:\CKProject\CK_Hermes\docs\plans\architecture-retro-action-items-2026-05-15.md
 ```
 
 並在 hermes-agent session 補 wiki log（`~/.hermes/profiles/meta/wiki/log.md`）：
@@ -314,8 +314,8 @@ B-5 4 bridge 啟用
 ## 關聯文件
 
 - 第二次架構覆盤：`~/.hermes/profiles/meta/wiki/concepts/architecture-retro-2026-05-18.md`
-- Sprint A 接力指引（已完成）：`D:/CKProject/hermes-agent/docs/plans/sprint-a-cross-session-relay-2026-05-18.md`
-- 整體 action items：`D:/CKProject/hermes-agent/docs/plans/architecture-retro-action-items-2026-05-15.md`
+- Sprint A 接力指引（已完成）：`D:/CKProject/CK_Hermes/docs/plans/sprint-a-cross-session-relay-2026-05-18.md`
+- 整體 action items：`D:/CKProject/CK_Hermes/docs/plans/architecture-retro-action-items-2026-05-15.md`
 - ADR-0030 Phase 1.5：`D:/CKProject/CK_AaaP/adrs/0030-embedding-dimension-unification-roadmap.md`
 - 4 bridge 工程交付：`~/.hermes/profiles/meta/wiki/concepts/workflow-c3-phase1-bridges-complete-2026-05-16.md`
-- 30 min cookbook：`D:/CKProject/hermes-agent/docs/plans/hermes-integration-demo-path-2026-05-16.md`
+- 30 min cookbook：`D:/CKProject/CK_Hermes/docs/plans/hermes-integration-demo-path-2026-05-16.md`

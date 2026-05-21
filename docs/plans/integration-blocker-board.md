@@ -35,9 +35,9 @@
 
 | # | 動作 | 工時 | 進入點 |
 |---|---|---|---|
-| 2 | **C.1 SOUL Step 1**（搬坤哥回 Missive、套 meta.soul.md） | 30 min | `bash D:/CKProject/hermes-agent/docs/plans/unblock-soul-c1.sh step1` |
-| A | **ADR-stale-check + pgvector-lint 一次上 CI**（M+K2）| 1.5h | `cp ../hermes-agent/docs/plans/adr-stale-check.py scripts/checks/`；K2 草稿在 `adr-0027-execution-plan-2026-04-29.md` |
-| 4 | **ADR-0024 + lvrland-bridge 採納**（roadmap #4） | 1.5h | `cp -r ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/* platform/services/.../ck-lvrland-bridge/` 即可（stub 12/12 已綠）|
+| 2 | **C.1 SOUL Step 1**（搬坤哥回 Missive、套 meta.soul.md） | 30 min | `bash D:/CKProject/CK_Hermes/docs/plans/unblock-soul-c1.sh step1` |
+| A | **ADR-stale-check + pgvector-lint 一次上 CI**（M+K2）| 1.5h | `cp ../CK_Hermes/docs/plans/adr-stale-check.py scripts/checks/`；K2 草稿在 `adr-0027-execution-plan-2026-04-29.md` |
+| 4 | **ADR-0024 + lvrland-bridge 採納**（roadmap #4） | 1.5h | `cp -r ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/* platform/services/.../ck-lvrland-bridge/` 即可（stub 12/12 已綠）|
 | 6 | **路線 B-冷 escalate config patch** | 30 min | `escalate-config-patch-2026-04-29.md` 5 patches，ANTHROPIC_API_KEY 留空 = 等同路線 A |
 | 15 | **ADR 季度結算機制**（M 條，可與 A 合併 commit） | 與 A 合併 | 同上 |
 

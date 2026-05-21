@@ -120,9 +120,9 @@ cd D:/CKProject/CK_Missive
 
 # 1. 複製 helper 到 source-of-truth
 mkdir -p docs/hermes-skills/ck-missive-bridge/scripts
-cp ../hermes-agent/docs/plans/skill-helper-template/query.py \
+cp ../CK_Hermes/docs/plans/skill-helper-template/query.py \
    docs/hermes-skills/ck-missive-bridge/scripts/query.py
-cp ../hermes-agent/docs/plans/skill-helper-template/install.sh \
+cp ../CK_Hermes/docs/plans/skill-helper-template/install.sh \
    docs/hermes-skills/ck-missive-bridge/install-helper.sh
 
 # 2. 編輯 docs/hermes-skills/ck-missive-bridge/SKILL.md，

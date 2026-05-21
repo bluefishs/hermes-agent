@@ -18,7 +18,7 @@
 |---|---|
 | **`D:\CKProject\`** | 跨 repo meta、整合驗收、跨 repo commit |
 | **`D:\CKProject\CK_AaaP\`** | 治理 / ADR / Runbook / hermes-stack / 跨 repo 規範 |
-| **`D:\CKProject\hermes-agent\`** | hermes Python / skill / SOUL（本 session） |
+| **`D:\CKProject\CK_Hermes\`** | hermes Python / skill / SOUL（本 session） |
 | **`D:\CKProject\CK_Missive\`** | Missive 業務代碼、shadow logger、KG |
 | **`D:\CKProject\CK_lvrland_Webmap\`** | LvrLand 業務代碼 |
 | **`D:\CKProject\CK_PileMgmt\`** | PileMgmt 業務代碼 |

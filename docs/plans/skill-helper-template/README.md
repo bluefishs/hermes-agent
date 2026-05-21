@@ -33,11 +33,11 @@
 cd D:/CKProject/<業務 repo>      # 例如 CK_Missive
 
 # 一鍵採納（cp helper + cp install + git stage + 提示 SKILL.md patch + 建議 commit）
-bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh \
+bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh \
      <skill-name> .
 
 # 含 deploy + 驗證（要求 ck-hermes-gateway 容器運行）
-bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh \
+bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh \
      <skill-name> . --deploy --verify
 ```
 

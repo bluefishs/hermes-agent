@@ -103,7 +103,7 @@ def register_all(registry) -> int:
 
 PoC 跑法：
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 python scripts/adr-query-poc.py search "pgvector"
 python scripts/adr-query-poc.py read CK_Missive#0006
 python scripts/adr-query-poc.py list --lifecycle proposed
@@ -127,7 +127,7 @@ Hermes runtime 在容器內，僅 mount `~/.hermes`（→ `/opt/data`）；**看
 1. CK_AaaP session 建 `CK_AaaP/scripts/adr-index-cron.sh`：
    ```bash
    #!/bin/sh
-   python /d/CKProject/hermes-agent/scripts/adr-query-poc.py --json-index \
+   python /d/CKProject/CK_Hermes/scripts/adr-query-poc.py --json-index \
      > ~/.hermes/profiles/meta/wiki/raw/adr-index.json
    ```
 2. host crontab：`*/30 * * * * /path/to/adr-index-cron.sh`

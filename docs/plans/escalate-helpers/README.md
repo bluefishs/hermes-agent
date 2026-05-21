@@ -69,9 +69,9 @@ Client 端（Open WebUI / Telegram bot / 自寫 client）看到 `_meta.complexit
 # 1. 從 hermes-agent 複製到 platform/services/skills/_shared/
 cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/skills/_shared
-cp ../hermes-agent/docs/plans/escalate-helpers/complexity.py \
+cp ../CK_Hermes/docs/plans/escalate-helpers/complexity.py \
    platform/services/skills/_shared/escalate_complexity.py
-cp ../hermes-agent/docs/plans/escalate-helpers/README.md \
+cp ../CK_Hermes/docs/plans/escalate-helpers/README.md \
    platform/services/skills/_shared/README.md
 
 # 2. 4 個 bridge skill 在 SKILL.md frontmatter 加 dependency
@@ -88,7 +88,7 @@ git commit -m "feat(skills): adopt escalate-complexity helper from hermes-agent 
 ## 測試
 
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 python -m pytest tests/skills/test_escalate_complexity.py -v
 # 20 tests
 ```

@@ -36,7 +36,7 @@ curl -sS http://localhost:8001/health
 # 預期：{"status":"ok","version":"5.5.8",...}
 
 # 2. hermes-agent fork 已 push 到 fork/main（本 session 已完成）
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 git log --oneline -1
 # 預期：54a97ad9c Merge origin/main (upstream sync 2026-05-16, ...)
 
@@ -90,7 +90,7 @@ ls ~/.hermes/profiles/meta/
 # 若不存在：mkdir -p ~/.hermes/profiles/meta/
 
 # 2. 複製 meta SOUL template
-cp D:/CKProject/hermes-agent/docs/plans/soul-templates/meta.soul.md \
+cp D:/CKProject/CK_Hermes/docs/plans/soul-templates/meta.soul.md \
    ~/.hermes/profiles/meta/SOUL.md
 
 # 3. 確認被讀到（hermes-stack 啟動時會 mount ~/.hermes）
@@ -168,7 +168,7 @@ failure mode：
 
 ```bash
 # Host 端跑（不需進 container）
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 $env:MISSIVE_BASE_URL = "http://localhost:8001"
 python scripts/verify-bridges.py --bridge missive
 ```

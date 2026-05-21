@@ -19,7 +19,7 @@ ADR-0021 寫於 Showcase 為獨立 repo 時。Showcase 後續 rebrand 為 AaaP �
 ```bash
 cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/docs/hermes-skills/ck-showcase-bridge
-cp ../hermes-agent/docs/plans/ck-showcase-bridge-stub/* \
+cp ../CK_Hermes/docs/plans/ck-showcase-bridge-stub/* \
    platform/services/docs/hermes-skills/ck-showcase-bridge/
 
 # CK_AaaP 採納時：

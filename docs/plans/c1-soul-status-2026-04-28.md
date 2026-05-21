@@ -92,7 +92,7 @@ mv D:/CKProject/CK_AaaP/runbooks/hermes-stack/SOUL.md \
    D:/CKProject/CK_Missive/SOUL.md
 
 # 1.2 套用 meta.soul.md 為 hermes-stack source
-cp D:/CKProject/hermes-agent/docs/plans/soul-templates/meta.soul.md \
+cp D:/CKProject/CK_Hermes/docs/plans/soul-templates/meta.soul.md \
    D:/CKProject/CK_AaaP/runbooks/hermes-stack/SOUL.md
 
 # 1.3 補 frontmatter（type/version/sync_targets/last_modified_at）
@@ -120,7 +120,7 @@ cd D:/CKProject/CK_Missive && git add SOUL.md
 
 ```bash
 # 2.1 激活 host meta wiki SOUL
-cp D:/CKProject/hermes-agent/docs/plans/soul-templates/meta.soul.md \
+cp D:/CKProject/CK_Hermes/docs/plans/soul-templates/meta.soul.md \
    ~/.hermes/profiles/meta/SOUL.md
 
 # 2.2 dry-run 確認

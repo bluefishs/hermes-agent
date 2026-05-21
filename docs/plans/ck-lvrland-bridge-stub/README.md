@@ -23,9 +23,9 @@ LvrLand 已有 `/api/v1/ai/query`（Groq+Ollama 混合 RAG）+ `/api/v1/analytic
 ```bash
 cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/docs/hermes-skills/ck-lvrland-bridge
-cp ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/SKILL.md \
-   ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/tool_spec.json \
-   ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/README.md \
+cp ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/SKILL.md \
+   ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/tool_spec.json \
+   ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/README.md \
    platform/services/docs/hermes-skills/ck-lvrland-bridge/
 
 # 然後在 CK_AaaP/adrs/ 建立 0024-ck-lvrland-bridge-skill.md（仿 ADR-0023）

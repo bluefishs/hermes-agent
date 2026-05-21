@@ -9,10 +9,10 @@
 #
 # Examples:
 #   # 在 CK_Missive session（cd D:/CKProject/CK_Missive）
-#   bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh ck-missive-bridge .
+#   bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh ck-missive-bridge .
 #
 #   # 含 deploy + verify（要求 hermes-gateway 容器活著）
-#   bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh \
+#   bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh \
 #        ck-missive-bridge . --deploy --verify
 #
 # 工作流：
@@ -40,7 +40,7 @@ Flags:
   --verify   --deploy 後跑 hermes /v1/responses 健康測試確認 model 能 emit
              terminal call
 
-Source: D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh
+Source: D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh
 EOF
     exit 1
 fi
@@ -60,7 +60,7 @@ for arg in "$@"; do
 done
 
 # ── 1. 確認 stub directory ─────────────────────────────────
-HERMES_AGENT="${HERMES_AGENT:-D:/CKProject/hermes-agent}"
+HERMES_AGENT="${HERMES_AGENT:-D:/CKProject/CK_Hermes}"
 declare -A STUB_DIRS=(
     [ck-missive-bridge]="skill-helper-template"
     [ck-lvrland-bridge]="ck-lvrland-bridge-stub"

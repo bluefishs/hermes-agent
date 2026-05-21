@@ -44,7 +44,7 @@ cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/docs/hermes-skills/ck-observability-bridge
 
 # 2. 從 hermes-agent 複製 skeleton
-cp -r ../hermes-agent/docs/plans/ck-observability-bridge-skeleton/* \
+cp -r ../CK_Hermes/docs/plans/ck-observability-bridge-skeleton/* \
       platform/services/docs/hermes-skills/ck-observability-bridge/
 
 # 3. 修檔內 cross-ref（hermes-agent skeleton → source of truth）

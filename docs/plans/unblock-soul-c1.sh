@@ -17,11 +17,11 @@
 #
 # 使用方式：
 #   # 從 CK_AaaP session 跑
-#   bash D:/CKProject/hermes-agent/docs/plans/unblock-soul-c1.sh step1
+#   bash D:/CKProject/CK_Hermes/docs/plans/unblock-soul-c1.sh step1
 #   # 切換到 hermes-agent session 跑
-#   bash D:/CKProject/hermes-agent/docs/plans/unblock-soul-c1.sh step2
+#   bash D:/CKProject/CK_Hermes/docs/plans/unblock-soul-c1.sh step2
 #   # 或一次跑（同 session 跑兩段，需確認 git config 兩 repo 都對）
-#   bash D:/CKProject/hermes-agent/docs/plans/unblock-soul-c1.sh all
+#   bash D:/CKProject/CK_Hermes/docs/plans/unblock-soul-c1.sh all
 
 set -euo pipefail
 

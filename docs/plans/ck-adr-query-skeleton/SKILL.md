@@ -42,7 +42,7 @@ metadata:
 ## 資料萃取（Host 端 cron）
 
 ```cron
-*/30 * * * * /usr/bin/python /d/CKProject/hermes-agent/scripts/adr-query-poc.py index --pretty > ~/.hermes/profiles/meta/wiki/raw/adr-index.json
+*/30 * * * * /usr/bin/python /d/CKProject/CK_Hermes/scripts/adr-query-poc.py index --pretty > ~/.hermes/profiles/meta/wiki/raw/adr-index.json
 ```
 
 JSON schema 1.0；含 104+ ADRs metadata + 32 collisions。30 分鐘 stale 對 ADR 查詢完全可接受

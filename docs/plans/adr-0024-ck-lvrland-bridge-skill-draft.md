@@ -4,7 +4,7 @@
 > **日期**：2026-04-29
 > **決策者**：CK Platform Team
 > **關聯**：`CK_AaaP#0020`（Phase 1 四 bridge 之最後一塊）/ `CK_AaaP#0018`（skill 契約 v2）/ `CK_AaaP#0021`、`CK_AaaP#0022`、`CK_AaaP#0023`（姊妹規範）
-> **採納路徑**：`cp D:/CKProject/hermes-agent/docs/plans/adr-0024-ck-lvrland-bridge-skill-draft.md D:/CKProject/CK_AaaP/adrs/0024-ck-lvrland-bridge-skill.md`，刪除 frontmatter 第 1 行「（草稿…）」標記，commit。
+> **採納路徑**：`cp D:/CKProject/CK_Hermes/docs/plans/adr-0024-ck-lvrland-bridge-skill-draft.md D:/CKProject/CK_AaaP/adrs/0024-ck-lvrland-bridge-skill.md`，刪除 frontmatter 第 1 行「（草稿…）」標記，commit。
 
 ## 背景
 
@@ -136,16 +136,16 @@ source 置於 `platform/services/docs/hermes-skills/ck-lvrland-bridge/`（與 00
 cd D:/CKProject/CK_AaaP
 
 # 1. 採納 ADR-0024
-mv ../hermes-agent/docs/plans/adr-0024-ck-lvrland-bridge-skill-draft.md \
+mv ../CK_Hermes/docs/plans/adr-0024-ck-lvrland-bridge-skill-draft.md \
    adrs/0024-ck-lvrland-bridge-skill.md
 # 編輯第 3 行 frontmatter，刪 "（草稿…）" 標記
 
 # 2. 採納 skill source
 mkdir -p platform/services/docs/hermes-skills/ck-lvrland-bridge
-cp ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/SKILL.md \
-   ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/tool_spec.json \
-   ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/README.md \
-   ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/install.sh \
+cp ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/SKILL.md \
+   ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/tool_spec.json \
+   ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/README.md \
+   ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/install.sh \
    platform/services/docs/hermes-skills/ck-lvrland-bridge/
 
 # 3. 補 .env.example § 5E

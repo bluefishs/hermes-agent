@@ -94,9 +94,9 @@ python3 /opt/data/skills/ck-observability-bridge/scripts/query.py alert_silence_
 cd D:/CKProject/CK_DigitalTunnel  # 確認此 repo 路徑
 
 mkdir -p docs/hermes-skills/ck-observability-bridge/scripts
-cp ../hermes-agent/docs/plans/ck-observability-bridge-skeleton/scripts/query.py \
+cp ../CK_Hermes/docs/plans/ck-observability-bridge-skeleton/scripts/query.py \
    docs/hermes-skills/ck-observability-bridge/scripts/query.py
-cp ../hermes-agent/docs/plans/skill-helper-template/install.sh \
+cp ../CK_Hermes/docs/plans/skill-helper-template/install.sh \
    docs/hermes-skills/ck-observability-bridge/install-helper.sh
 
 # 編輯 SKILL.md 加上方「呼叫範例」段

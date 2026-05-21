@@ -11,7 +11,7 @@
 1. **真正的 P0**：Hermes 對 ck-* skill 的 tool-call 失效（7 層真因），不是模型路線/credit 問題
 2. **真正的解**：每個 ck-* skill 加 `scripts/query.py` helper（純 stdlib）+ SKILL.md「呼叫範例」段
 3. **5/5 預製完成**：missive 已 deploy 到 runtime；其他 4 等 CF Tunnel 上線後 < 2 min 採納
-4. **採納方式**：`bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh <skill> .`
+4. **採納方式**：`bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh <skill> .`
 5. **唯一阻塞**：CF Tunnel `lvrland.cksurvey.tw / pile.cksurvey.tw / showcase.cksurvey.tw / tunnel.cksurvey.tw` 上線（roadmap #12-13 升 P0）
 
 ## 9 輪 Iteration Timeline
@@ -129,7 +129,7 @@ L4 資料層 PostgreSQL + pgvector
 
 ```bash
 cd D:/CKProject/CK_Missive
-bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh \
+bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh \
      ck-missive-bridge . --deploy --verify
 git commit -m "..."  # 用 adopt.sh 提示的 message
 git push
@@ -148,7 +148,7 @@ git push
 
 ```bash
 cd D:/CKProject/<repo>
-bash D:/CKProject/hermes-agent/docs/plans/skill-helper-template/adopt.sh \
+bash D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/adopt.sh \
      <skill-name> . --deploy --verify
 git commit -m "..."
 ```

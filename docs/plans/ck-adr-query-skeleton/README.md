@@ -49,12 +49,12 @@ cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/docs/hermes-skills/ck-adr-query
 
 # 2. 從 hermes-agent 複製 skeleton
-cp -r ../hermes-agent/docs/plans/ck-adr-query-skeleton/* \
+cp -r ../CK_Hermes/docs/plans/ck-adr-query-skeleton/* \
       platform/services/docs/hermes-skills/ck-adr-query/
 
 # 3. 加 host cron（每 30 分鐘萃取 ADR index）
 # 用 Windows Task Scheduler 或 Linux cron：
-#   */30 * * * * /usr/bin/python /d/CKProject/hermes-agent/scripts/adr-query-poc.py index --pretty > /c/Users/User1/.hermes/profiles/meta/wiki/raw/adr-index.json
+#   */30 * * * * /usr/bin/python /d/CKProject/CK_Hermes/scripts/adr-query-poc.py index --pretty > /c/Users/User1/.hermes/profiles/meta/wiki/raw/adr-index.json
 
 # 4. 採納 ADR-0026 ck-adr-query-skill（依 retro §3.E 提案）
 # 5. install.sh 部署到 ~/.hermes/skills/

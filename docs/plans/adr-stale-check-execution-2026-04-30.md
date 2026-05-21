@@ -40,7 +40,7 @@ cd D:/CKProject/CK_AaaP
 
 # 把腳本搬到 scripts/checks/ 子目錄
 mkdir -p scripts/checks
-cp ../hermes-agent/docs/plans/adr-stale-check.py scripts/checks/adr-stale-check.py
+cp ../CK_Hermes/docs/plans/adr-stale-check.py scripts/checks/adr-stale-check.py
 chmod +x scripts/checks/adr-stale-check.py
 
 # 跑一次看現況

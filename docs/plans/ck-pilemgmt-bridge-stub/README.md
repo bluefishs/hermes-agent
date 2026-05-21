@@ -22,7 +22,7 @@ ADR-0023 Tool 2 `pile_query_sync` 依賴 PileMgmt 側新增 `/api/ai/query` 端�
 ```bash
 cd D:/CKProject/CK_AaaP
 mkdir -p platform/services/docs/hermes-skills/ck-pilemgmt-bridge
-cp ../hermes-agent/docs/plans/ck-pilemgmt-bridge-stub/* \
+cp ../CK_Hermes/docs/plans/ck-pilemgmt-bridge-stub/* \
    platform/services/docs/hermes-skills/ck-pilemgmt-bridge/
 # 然後填 handler（依 ck-missive-bridge v2.0 模式）
 ```

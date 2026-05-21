@@ -196,21 +196,21 @@ if __name__ == "__main__":
 cd /d/CKProject/CK_Missive && git pull
 
 # 2. 同步至 missive profile
-bash /d/CKProject/hermes-agent/scripts/sync-missive-soul.sh
+bash /d/CKProject/CK_Hermes/scripts/sync-missive-soul.sh
 
 # 3. 啟動 day-1 量測（早晨 9:00）
-mkdir -p /d/CKProject/hermes-agent/docs/plans/missive-pilot-results
+mkdir -p /d/CKProject/CK_Hermes/docs/plans/missive-pilot-results
 DATE=$(date +%Y-%m-%d)
 echo "ts,prompt_id,prompt_summary,tool_called,tool_success,response_quality,notes" \
-  > /d/CKProject/hermes-agent/docs/plans/missive-pilot-results/day-$DATE.csv
+  > /d/CKProject/CK_Hermes/docs/plans/missive-pilot-results/day-$DATE.csv
 
 # 4. 互動：對 missive profile 跑 8 條 prompt
 # python -m hermes_cli.main -p missive chat
 # （手動執行，逐條紀錄到 csv）
 
 # 5. 23:30 跑 rollup
-python /d/CKProject/hermes-agent/scripts/missive-pilot-rollup.py \
-  /d/CKProject/hermes-agent/docs/plans/missive-pilot-results/day-$DATE.csv
+python /d/CKProject/CK_Hermes/scripts/missive-pilot-rollup.py \
+  /d/CKProject/CK_Hermes/docs/plans/missive-pilot-results/day-$DATE.csv
 ```
 
 ---

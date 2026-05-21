@@ -63,7 +63,7 @@ a423464f docs: upstream sync cadence, feature eval, and PR draft
 ## 7. Rebase 執行指令（需授權）
 
 ```bash
-cd D:/CKProject/hermes-agent
+cd D:/CKProject/CK_Hermes
 
 # 0. 確認 clean tree
 git status  # 應該 clean or only stash-able

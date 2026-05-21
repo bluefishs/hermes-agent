@@ -9,7 +9,7 @@
 
 | 來源 | 狀態 |
 |---|---|
-| 本機 filesystem `D:/CKProject/hermes-agent/docs/plans/sprint-a-cross-session-relay-2026-05-18.md` | ✅ **已就緒**（commit `367e2ff6f` 本地落地）|
+| 本機 filesystem `D:/CKProject/CK_Hermes/docs/plans/sprint-a-cross-session-relay-2026-05-18.md` | ✅ **已就緒**（commit `367e2ff6f` 本地落地）|
 | fork remote `bluefishs/hermes-agent` main | ⬜ 待 push（被 pre-push enforcement 阻斷，**與本 commit 無關**：跨 repo ADR registry STALE + pgvector schema FAIL + 4 STALE CLAUDE.md/MEMORY.md）|
 
 **操作員執行 Sprint A 不需要 fork/main 同步**——直接從本機 `D:/` 讀檔即可。push 修通後再 sync 是分開的作業。
@@ -41,7 +41,7 @@ claude code .
 貼路徑給 Claude：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\hermes-integration-demo-path-2026-05-16.md
+請依 D:\CKProject\CK_Hermes\docs\plans\hermes-integration-demo-path-2026-05-16.md
 執行 Phase 1（missive bridge MVP）的 Step 1 至 Step 6。
 ```
 
@@ -53,7 +53,7 @@ claude code .
 | 2 | 套 meta SOUL template（從 `hermes-agent/docs/plans/soul-templates/meta.soul.md` 複製到 `~/.hermes/profiles/meta/SOUL.md`） | meta SOUL 啟用 |
 | 3 | 在 CK_Missive 端的 SKILL.md（或 hermes-skill package）加 frontmatter `toolsets: [missive]` | SKILL.md 含 toolsets |
 | 4 | `docker compose up -d --build`（hermes-stack 三容器） | hermes-web :9119 / hermes-gateway :8642 / open-webui :3000 都 healthy |
-| 5 | 跑 `python D:/CKProject/hermes-agent/scripts/verify-bridges.py --bridge missive` | `[OK] missive_health: http://host.docker.internal:8002/health → 200` |
+| 5 | 跑 `python D:/CKProject/CK_Hermes/scripts/verify-bridges.py --bridge missive` | `[OK] missive_health: http://host.docker.internal:8002/health → 200` |
 | 6 | 開瀏覽器 → http://localhost:9119 對話「幫我看 Missive 還好嗎」 | LLM 觸發 `missive_health` tool → 真實回應 Missive 狀態 |
 
 ### 通過標準
@@ -80,7 +80,7 @@ claude code .
 貼路徑給 Claude：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.md QW-1
+請依 D:\CKProject\CK_Hermes\docs\plans\architecture-retro-action-items-2026-05-15.md QW-1
 執行 prometheus.yml 加 hermes-gateway scrape + 基礎 Grafana 面板。
 ```
 
@@ -117,7 +117,7 @@ claude code .
 貼路徑給 Claude：
 
 ```
-請依 D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.md QW-2
+請依 D:\CKProject\CK_Hermes\docs\plans\architecture-retro-action-items-2026-05-15.md QW-2
 執行 backend/app/core/config.py:45 反轉 DEVELOPMENT_MODE=False 預設 + startup assert。
 ```
 
@@ -148,7 +148,7 @@ claude code .
 跑通 Sprint A 後，請於對應 session 寫 commit 並回填進度到：
 
 ```
-D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.md
+D:\CKProject\CK_Hermes\docs\plans\architecture-retro-action-items-2026-05-15.md
 ```
 
 把 QW-1 / QW-2 / QW-3-full 從 ⬜ 改 ✅，並追加完成日期 + commit hash。
@@ -192,7 +192,7 @@ D:\CKProject\hermes-agent\docs\plans\architecture-retro-action-items-2026-05-15.
 
 ## 關聯文件
 
-- 詳細 cookbook：`D:/CKProject/hermes-agent/docs/plans/hermes-integration-demo-path-2026-05-16.md`
+- 詳細 cookbook：`D:/CKProject/CK_Hermes/docs/plans/hermes-integration-demo-path-2026-05-16.md`
 - 整體 retro：`~/.hermes/profiles/meta/wiki/concepts/architecture-retro-2026-05-18.md`
-- 上一份 action items：`D:/CKProject/hermes-agent/docs/plans/architecture-retro-action-items-2026-05-15.md`
+- 上一份 action items：`D:/CKProject/CK_Hermes/docs/plans/architecture-retro-action-items-2026-05-15.md`
 - 4 bridge 工程交付：`~/.hermes/profiles/meta/wiki/concepts/workflow-c3-phase1-bridges-complete-2026-05-16.md`

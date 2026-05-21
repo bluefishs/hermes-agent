@@ -84,9 +84,9 @@ python3 /opt/data/skills/ck-showcase-bridge/scripts/query.py sso_status --projec
 ```bash
 cd D:/CKProject/CK_Showcase
 mkdir -p docs/hermes-skills/ck-showcase-bridge/scripts
-cp ../hermes-agent/docs/plans/ck-showcase-bridge-stub/scripts/query.py \
+cp ../CK_Hermes/docs/plans/ck-showcase-bridge-stub/scripts/query.py \
    docs/hermes-skills/ck-showcase-bridge/scripts/query.py
-cp ../hermes-agent/docs/plans/skill-helper-template/install.sh \
+cp ../CK_Hermes/docs/plans/skill-helper-template/install.sh \
    docs/hermes-skills/ck-showcase-bridge/install-helper.sh
 
 # 編輯 SKILL.md 加上方「呼叫範例」段

@@ -5,7 +5,7 @@
 > **位置**：原「## 工具清單」段之後 / 「## 使用時機」段之前
 > **前置**：CF Tunnel `lvrland.cksurvey.tw` 必須先上線（roadmap #12 P0）
 > **採納工時**：5 min
-> **真因 + 設計**：見 `D:/CKProject/hermes-agent/docs/plans/hermes-runtime-blockers-postmortem.md`（7 層真因）+ `D:/CKProject/hermes-agent/docs/plans/skill-helper-template/README.md`（通用設計）
+> **真因 + 設計**：見 `D:/CKProject/CK_Hermes/docs/plans/hermes-runtime-blockers-postmortem.md`（7 層真因）+ `D:/CKProject/CK_Hermes/docs/plans/skill-helper-template/README.md`（通用設計）
 
 ## 直接複製到 ck-lvrland-bridge SKILL.md
 
@@ -70,9 +70,9 @@ cd D:/CKProject/CK_lvrland_Webmap
 
 # 1. 複製 helper（已預先客製化）+ install
 mkdir -p docs/hermes-skills/ck-lvrland-bridge/scripts
-cp ../hermes-agent/docs/plans/ck-lvrland-bridge-stub/scripts/query.py \
+cp ../CK_Hermes/docs/plans/ck-lvrland-bridge-stub/scripts/query.py \
    docs/hermes-skills/ck-lvrland-bridge/scripts/query.py
-cp ../hermes-agent/docs/plans/skill-helper-template/install.sh \
+cp ../CK_Hermes/docs/plans/skill-helper-template/install.sh \
    docs/hermes-skills/ck-lvrland-bridge/install-helper.sh
 
 # 2. 編輯 SKILL.md，加上方「呼叫範例」段
