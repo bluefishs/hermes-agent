@@ -4,10 +4,11 @@ version: 0.1.0
 description: CK_PileMgmt 樁管理系統橋接 — health 檢測、NL 查詢、Celery 狀態。
 author: CK Platform Team
 license: MIT
+toolsets: [pilemgmt]
 metadata:
   hermes:
     tags: [CK, PileMgmt, Piles, Celery, Geospatial]
-    homepage: https://pile.cksurvey.tw
+    homepage: https://pilemgmt.cksurvey.tw
 prerequisites:
   env_vars: [PILE_BASE_URL, PILE_API_TOKEN]
 ---

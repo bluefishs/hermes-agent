@@ -4,6 +4,7 @@ version: 0.1.0
 description: CK_Showcase 治理 API 橋接 — 8 受管專案治理面板（Skills/Agents/Security/ADR-map/SSO/Health/Metrics）。透過 Showcase FastAPI 聚合查詢，Hermes 為自然語言入口。
 author: CK Platform Team
 license: MIT
+toolsets: [showcase]
 metadata:
   hermes:
     tags: [CK, Showcase, Governance, Skills, Agents, Security, ADR]

@@ -4,12 +4,13 @@ version: 0.1.0
 description: CK 平臺觀測棧橋接 — Loki 日誌、Prometheus 指標、Grafana 儀表板、Alertmanager 警報之自然語言聚合查詢。
 author: CK Platform Team
 license: MIT
+toolsets: [observability]
 metadata:
   hermes:
     tags: [CK, Observability, Loki, Prometheus, Grafana, Alertmanager, Monitoring]
     homepage: http://192.168.50.210:3001
 prerequisites:
-  env_vars: [OBS_LOKI_URL, OBS_PROMETHEUS_URL, OBS_GRAFANA_URL]
+  env_vars: [OBSERVABILITY_PROMETHEUS_URL, OBSERVABILITY_LOKI_URL, OBSERVABILITY_GRAFANA_URL, OBSERVABILITY_ALERTMANAGER_URL]
 ---
 
 # CK Observability Bridge — Hermes Skill v0.1
