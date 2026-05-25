@@ -1,9 +1,30 @@
 # Cross-Session Next 3 — 收斂跨 session 待動清單
 
-> 版本：v2.2 · 2026-05-22 evening · CK_Hermes session（5/5 實機驗收 + SOUL 注入反例後）
+> 版本：v2.3 · 2026-05-25 · CK_Hermes session（#1 v1 落地 + #3 ADR-CK-002 完成）
 > 目的：取代 sprint-a-relay / sprint-b-relay / retro-execution-plan §2.2-§2.4 / breakpoint-audit §7.2 散在 4 處的待動條目
 > 原則：**只列下一動 3 項** — 任一項落地後本檔即時更新，不堆積歷史
 > Memory：[[feedback-integration-over-scope]]、[[feedback-pre-demo-functional-verification]]
+
+---
+
+## v2.3 變更摘要（#1 v1 落地 + #3 ADR-CK-002 完成）
+
+### v2.2 #1 ck-platform-context skill v1 **半成品落地**
+- ✅ `tools/platform_context_tool.py` — `aaap_get_ssot_context` tool + 8 個 SSOT 專案 + query filter
+- ✅ Container 內單元 + 整合測試通過（讀真實 AaaP `:5201/api/overview/integration-status`）
+- ✅ `docs/plans/ck-platform-context-stub/SKILL.md` — frontmatter `toolsets: [aaap]`
+- ✅ docker-compose 加 `AAAP_BASE_URL=http://host.docker.internal:5201`
+- ⚠️ **未通**：hermes runtime 未把 `aaap` toolset surface 給 LLM — `aaap` 沒在 `hermes_cli/tools_config.CONFIGURABLE_TOOLSETS` 註冊，runtime `_get_platform_tools(api_server)` 不會把 `aaap` 加進 enabled list
+- → **v2 需要 L3 patch hermes-agent source**（依 [`CK_FORK_POLICY.md §2`](../../CK_FORK_POLICY.md)），添 `aaap` 到 `hermes_cli/tools_config.CONFIGURABLE_TOOLSETS`
+- v2 patch + upstream PR draft 留作獨立 ADR-CK-004 候選
+
+### v2.2 #3 ADR-CK-002 ✅ **完成**
+- ✅ `docs/plans/adr-ck-002-image-entrypoint-venv.md` 寫成
+- 結論：PYTHONPATH workaround = 終解（L1 配置，不需 L3 patch）
+- 重啟 root cause 調查的 3 個觸發條件就位（§4.3）
+
+### v2.2 #2 Phase 2.5 bulk rename — **未動，handoff CK_AaaP session**
+依 [`CK_AAAP_ABSORPTION_POLICY.md §3.1`](../../../CK_AaaP/CK_AAAP_ABSORPTION_POLICY.md)；hard deadline 2026-08-22
 
 ---
 
@@ -40,9 +61,25 @@ v2 #1（修 profile/meta config 解 L21）**已完成**：
 
 ---
 
-## 當下 Top 3（v2.2，5/5 實機 + SOUL 失敗後重排）
+## 當下 Top 3（v2.3，#1 v1 已落地，剩 L3 patch 為新 #1）
 
-### 🥇 #1 — ADR-CK-003 v2：寫 `ck-platform-context` skill（取代 SOUL 注入）
+### 🥇 #1 — ADR-CK-004：L3 patch `hermes_cli/tools_config.CONFIGURABLE_TOOLSETS` 加 `aaap`
+
+**目標**：把 v2.2 #1 v1 的 ck-platform-context 真實 surface 到 LLM tools[]
+
+**作業內容**：
+1. 寫 ADR-CK-004（依 [`CK_FORK_POLICY.md §2`](../../CK_FORK_POLICY.md) L3 准入準則 — 這次**滿足**：無 L1/L2 替代、需動 upstream `hermes_cli/tools_config.py:54` 的 `CONFIGURABLE_TOOLSETS` list）
+2. Patch：把 `aaap`（以及預留 `missive`/`observability`/`showcase`/`pilemgmt`/`lvrland`）加進 CONFIGURABLE_TOOLSETS
+3. 同步 profile/meta config.yaml 加 `platform_toolsets.api_server: [<defaults> + aaap]`
+4. Rebuild image v2026.5.25
+5. 直連 hermes :8642 chat 「列管系統清單」應觀察到 tool call event
+6. upstream PR draft（依 FORK_POLICY §2 step 3）— 但這是 NousResearch 標準擴展點，可能他們會接受
+
+**DoD**：hermes 直連 chat 真實呼叫 `aaap_get_ssot_context`（docker logs 看到 tool dispatch），回答含 SSOT 8 個專案
+
+**工時**：3-4h（含 ADR 寫 + patch + image rebuild + 測試）
+
+### v2.2 原 #1（已部分落地，留作參考）— ADR-CK-003 v2：寫 `ck-platform-context` skill（取代 SOUL 注入）
 
 **目標**：讓 Hermes 路徑能答 AaaP SSOT 問題，且**不**膨脹 SOUL.md（避免每次 chat +1.2KB → +70s 延遲）
 
@@ -87,7 +124,9 @@ v2 #1（修 profile/meta config 解 L21）**已完成**：
 
 ---
 
-### 🥉 #3 — ADR-CK-002 寫 image entrypoint venv quirk
+### 🥉 #3 — ✅ **完成** — ADR-CK-002 image entrypoint venv quirk（見 [adr-ck-002-image-entrypoint-venv.md](adr-ck-002-image-entrypoint-venv.md)）
+
+### v2.2 原 #3（已完成，留作參考）— ADR-CK-002 寫 image entrypoint venv quirk
 
 **目標**：把 PYTHONPATH workaround 升 ADR + 究 root cause（為何 web container 走 entrypoint.sh 的 `source .venv/bin/activate` 後 `python3` 仍找不到 hermes_constants，而 gateway 走同一路徑沒事）
 
