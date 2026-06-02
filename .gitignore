@@ -79,3 +79,9 @@ docs/superpowers/*
 .claude/
 # Curl test scratch payload (used by docs/plans/skill-helper-template/)
 docs/plans/_demo_payload.json
+# Repo-root scratch probes (_desc.txt / _p.out / _q.py / _skill.md / _snap.txt 等診斷暫存)
+/_*.txt
+/_*.out
+/_*.py
+/_*.md
+/_*.json
