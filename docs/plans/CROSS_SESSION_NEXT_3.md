@@ -1,9 +1,25 @@
 # Cross-Session Next 3 — 收斂跨 session 待動清單
 
-> 版本：v2.3 · 2026-05-25 · CK_Hermes session（#1 v1 落地 + #3 ADR-CK-002 完成）
+> 版本：v2.4 · 2026-06-03 · CK_Hermes session（6/3 覆盤同步：v2.3 Top-3 已被 ADR-CK-003 §7 取代）
 > 目的：取代 sprint-a-relay / sprint-b-relay / retro-execution-plan §2.2-§2.4 / breakpoint-audit §7.2 散在 4 處的待動條目
 > 原則：**只列下一動 3 項** — 任一項落地後本檔即時更新，不堆積歷史
 > Memory：[[feedback-integration-over-scope]]、[[feedback-pre-demo-functional-verification]]
+
+---
+
+## v2.4 變更摘要（2026-06-03 覆盤同步 — 收斂為單一 roadmap）
+
+> 6/2 端到端 GO + 6/3 意識體聯邦定調（ADR-CK-003）後，本檔 v2.3 的「當下 Top 3」已過時並與 6/3 實測**矛盾**，故收斂：
+
+- **canonical roadmap 改以 [`adr-ck-003-aaap-consciousness-federation.md §7`](adr-ck-003-aaap-consciousness-federation.md) 為單一事實來源**（S0–S5），本檔 v2.3 「當下 Top 3」**整段 superseded**，僅保留供歷史回溯。
+- **v2.3 #1（ADR-CK-004 L3 patch 把 `aaap` toolset surface 給 LLM）→ 降級/重新評估**：6/3 S2.5 β spike 已實測證明「把 bridge 註冊成真 tool（MCP）→ 確定性 dispatch」**不成立、甚至更糟**（真 tool 3/3 寫成文字，baseline `terminal` 3/3 真跑）。瓶頸＝**模型發 structured tool_call 可靠度**（runtime/fork 層），非「有沒有把 tool surface 給 LLM」。∴ 同理 surface `aaap` toolset 也**未必**讓 LLM 可靠呼叫；ADR-CK-004 動 image rebuild 前，應先驗證 runtime 層 dispatch 可靠度策略（tool_choice / 換模型 / gateway post-process）。
+- **新 Top 3（取自 ADR-CK-003 §7，依風險/價值排序）**：
+  1. **S3 — Meta 跨平臺統整管道**（讀坤哥 Memory Wiki 摘要 → Meta briefing）：純新增、不動 dispatch、對「meta=AaaP 大腦」最有意義。**✅ 設計契約已寫** [`s3-meta-federation-briefing-design.md`](s3-meta-federation-briefing-design.md)（三段：A 源=CK_Missive 開 `/api/ai/memory/digest`＝瓶頸／B 管道=Hermes bridge 薄 action／C 匯=awakening 折 briefing）。**下一動＝段 A 屬 CK_Missive session**（先開 digest 端點），Hermes 段 B/C 依賴之。
+  2. **promote ADR-CK-003 → 正式 `CK_AaaP#NNNN`**（CK_AaaP session）+ 更新 ADR REGISTRY：治理收斂，終結「Hermes 終局角色」漂浮。
+  3. **dispatch 可靠度 runtime 決策**（非 SOUL/config）：在 ① tool_choice 強制 ② 換 tool-calling 更穩模型 ③ gateway post-process 三者間選一條做有界 spike。**β spike 已證 α(原生 tool)/MCP 皆非正解，勿再 blind 試 prompt/tool 形式**。
+     - **2026-06-03 唯讀深掘 → 規格已寫 [`adr-ck-005-dispatch-tool-choice-forcing.md`](adr-ck-005-dispatch-tool-choice-forcing.md)**：根因精確坐實＝`run_agent.py`（16k 行）**`tool_choice` 出現 0 次**，agent loop 的 LLM kwargs 單一建構點 `_build_api_kwargs:9795` 各 mode 都傳 `tools=` 卻從不傳 `tool_choice`→預設 auto→模型可自由寫成文字。下游 adapter（`anthropic_adapter:1986-1996`/`auxiliary_client:964-991`）**早能吃 tool_choice**，缺口純在上游 loop 從未傳。修法＝`_build_api_kwargs` 條件式注入（僅首輪、profile 旗標 `dispatch.force_first_tool: terminal`）。屬 **L3 fork**（patch+rebuild+PR），**待使用者裁示投入**。**建議先於 ADR-CK-004 做**（強制發 tool 是 surface toolset 能可靠被呼叫的前置）。
+     - 在此之前 baseline 維持 terminal ~50-75% GO + 失敗重試。
+- **baseline 狀態（6/3 複驗 live）**：`query.py agent_query`「公文總數」→ `ok/success:true`、**1,821 份**（收文1259+發文562）、`tools_used:[get_statistics]` 輕路徑、23s、無捏造。GO 維持。
 
 ---
 
