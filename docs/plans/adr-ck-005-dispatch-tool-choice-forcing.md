@@ -1,6 +1,6 @@
 # ADR-CK-005: dispatch 可靠度 — agent loop 條件式強制 tool_choice（fork spike 設計）
 
-> 狀態：**proposed（plan-only / design spike）** — 本檔不動 production、不改碼；定義 fork 改動規格供未來實作
+> 狀態：**rejected（spike 已實作+live 測試→負向，已還原 baseline）** — 見下方「⛔ 結果」；選項①對 groq 無效，方向轉③/②
 > 日期：2026-06-03 · CK_Hermes session
 > 政策：[`CK_FORK_POLICY.md`](../../CK_FORK_POLICY.md) — 本案落 **L3（patch upstream `run_agent.py` + rebuild image + upstream PR 草稿）**
 > 關聯：[`adr-ck-003-aaap-consciousness-federation.md §7-S2.5`](adr-ck-003-aaap-consciousness-federation.md)（β spike 反證「tool 形式」非正解）、[`CROSS_SESSION_NEXT_3.md`](CROSS_SESSION_NEXT_3.md) v2.4 #3
@@ -11,6 +11,30 @@
 ## 0. 一句話
 
 dispatch 不穩（terminal ~50-75%）的**結構性根因**＝ Hermes agent loop 對 LLM 的每輪呼叫**從不設 `tool_choice`**（預設 auto），模型遂可自由選「發 tool_call」或「把指令寫成文字」。修法＝在 agent loop 的 kwargs 建構單點**條件式注入 `tool_choice`**，強制「業務查詢輪」必發 tool_call。
+
+---
+
+## ⛔ 結果（2026-06-03 spike 已完整實作並 live 測試 → **負向、已還原**）
+
+> supersede「proposed」狀態：本案已實作、部署、A/B 測試、**判定無效並還原至 pristine baseline**。選項①否決。
+
+**實作完全成功，但模型不買單。** patch 正確注入 `tool_choice`（debug log 鐵證：每個首輪 `[acc=1 mode=chat_completions] FORCED tool_choice={'type':'function','function':{'name':'terminal'}} ntools=27`），但 **groq llama-3.3-70b 不可靠地遵守強制**：
+
+| 7 樣本 /v1「公文總數」（toggle=terminal）| turn-1 行為 | 判定 |
+|---|---|---|
+| 4/7（on1/on3/on4/on7）| 真發 structured `terminal` tool_call | ✅ 強制生效→dispatch（其中 on3/on7 後端生成層降級「AI 回答生成超時」屬殘留③，非 dispatch 問題）|
+| 3/7（on2/on5/on6）| **吐成畸形文字**：`ilorc {"terminal": "python3 …query.py…"}`（亂碼 token + tool-call-as-text）| ❌ 強制已套用但 groq 未發 structured call |
+
+- **4/7 ≈ 57%**，落在 baseline ~50-75% 區間內 —— **強制未證明提升可靠度**。
+- on6 的 `ilorc` 亂碼 + tool-call-as-text **與 S2.5 β spike（MCP `missive_query`）完全同源失敗模式**（`ilorc`/`incontri la regola` 亂碼）。
+- **∴ 鐵證結論**：瓶頸**不在 Hermes 缺 tool_choice**（patch 已補上且正確送達），而在 **groq llama-3.3-70b 對「被強制的 tool_choice」仍間歇吐成文字**——provider/模型的 tool-calling 保真度問題。**選項①（tool_choice，三方向中最被看好者）亦否決。**
+
+**還原**：容器 `run_agent.py` 自 `run_agent.py.bak.20260603-pre-ck005` 還原（md5 = pristine `6d1a08dead…`）、移除 toggle/debug、重啟回 baseline；repo `run_agent.py` `git checkout` 還原（不留核心檔改動）；query.py 探針複驗 `ok/success:true`。**baseline GO 維持。**
+
+**方向重訂（① 既否決）**：
+- **③ gateway post-process（現升為首選，因 model-agnostic）**：groq 失敗時格式穩定（`{"terminal":"python3 …query.py…"}` 或裸 query.py 指令字串），gateway 可在收到「文字化 tool call」時偵測 + 真執行。不靠模型保真度。
+- **② 換 tool-calling 更穩模型**：根治但涉成本/部署評估（groq 已是當前最佳實測者）。
+- patch 程式碼（呼叫點注入 + `_ck_maybe_force_first_tool` helper，env/toggle 雙閘）規格見下 §3/§4，保留供未來參考；**已證對 groq 無效，勿再投入①**。
 
 ---
 
