@@ -1,6 +1,19 @@
 # ADR-CK-005: dispatch 可靠度 — agent loop 條件式強制 tool_choice（fork spike 設計）
 
-> 狀態：**rejected（spike 已實作+live 測試→負向，已還原 baseline）** — 見下方「⛔ 結果」；選項①對 groq 無效，方向轉③/②
+> 狀態：**rejected → ⚠️ 2026-06-03 查證 ERRATA：受測模型實為 qwen2.5:7b 非 groq（見 §0.5）——「①對 groq 無效」依據失效，①待在真 groq 70b 上重測** — 見下方「⛔ 結果」與「§0.5 ERRATA」
+
+## 0.5 ⚠️ ERRATA（2026-06-03 :9119 dashboard 查證，推翻本 ADR 否決依據）
+
+**本 ADR 全程聲稱受測模型為 groq `llama-3.3-70b`，但實機查證證明實際受測的是 ollama `qwen2.5:7b`。**
+
+- 根因：`active_profile=meta`，`/v1` 載入 **meta profile config.yaml（主模型 qwen2.5:7b，最後修改停在 5/22）**；6/2「config 切 groq」改的是 **root config.yaml**，對 active=meta 不生效（與 6/2 改錯 SOUL 同一陷阱，[[feedback_hermes_active_profile_before_edit]]）。
+- 鐵證：tool_choice patch 改 `run_agent.py`（不改 model）→ 受測模型＝當時 active 主模型；`:9119/api/sessions` 今日 9 session（含本 spike 7 樣本，tool_call 1~5）`billing_base_url` **全 = ck-ollama qwen、0 筆 groq**。
+- **∴ 正確結論**：本 ADR 證明的是「**qwen2.5:7b** 對被強制的 tool_choice 仍 4/7 吐文字」；**groq 70b 的 tool_choice 遵守度從未被測**。「①對 groq 無效」**不成立**。
+- **修正後方向**：①tool_choice **不否決**，但前提是先把 **meta profile config 主模型切真 groq 70b**（root config 無效），再 A/B 重測。
+- **→ 2026-06-04 執行結果（在真 groq 上驗證受阻）**：切 groq 70b 真生效（ck-ollama 無 70b、實走 groq.com 坐實），但 **groq 免費 tier on_demand TPM 12k < hermes 每請求 20,427 token → 首次後全 413/502，不可行**，已還原 qwen（端到端複驗 1821 筆 GO）。∴ **①在真 groq 70b 上的驗證被 TPM 牆擋住**，需 groq 付費 tier 或削 prompt<12k 才能測；現實 dispatch 改善回 **③ gateway post-process**（model-agnostic、不受 TPM）。詳見 [`2026-06-03-hermes-ui-integration-review.md`](2026-06-03-hermes-ui-integration-review.md) §2.5。
+
+---
+
 > 日期：2026-06-03 · CK_Hermes session
 > 政策：[`CK_FORK_POLICY.md`](../../CK_FORK_POLICY.md) — 本案落 **L3（patch upstream `run_agent.py` + rebuild image + upstream PR 草稿）**
 > 關聯：[`adr-ck-003-aaap-consciousness-federation.md §7-S2.5`](adr-ck-003-aaap-consciousness-federation.md)（β spike 反證「tool 形式」非正解）、[`CROSS_SESSION_NEXT_3.md`](CROSS_SESSION_NEXT_3.md) v2.4 #3
@@ -115,10 +128,11 @@ dispatch:
 
 ---
 
-## 7. 待辦
+## 7. 待辦（已收斂 — 本案 rejected）
 
-- [ ] 使用者裁示是否投入此 fork spike（需 rebuild image）。
-- [ ] 實作 patch（CK_Hermes session，授權後）。
-- [ ] A/B live 驗證 + 數據回填 §6。
-- [ ] upstream PR 草稿。
+- [x] ~~使用者裁示是否投入此 fork spike~~ → 2026-06-03 已投入並完成。
+- [x] 實作 patch（呼叫點注入 + `_ck_maybe_force_first_tool` helper，env/toggle 雙閘）。
+- [x] A/B live 驗證 + 數據回填 §6 → **負向（4/7 落 baseline 區間），否決並還原 pristine**。
+- [x] ~~upstream PR 草稿~~ → **因否決不送**（對 groq 無效，無 upstream 價值）。
+- [ ] **後續方向（轉出本 ADR）**：③ gateway post-process（首選）/ ② 換更穩模型 — 待使用者裁示，追蹤於 [`adr-ck-003-aaap-consciousness-federation.md §10`](adr-ck-003-aaap-consciousness-federation.md) + [`CROSS_SESSION_NEXT_3.md`](CROSS_SESSION_NEXT_3.md) #3。
 </content>

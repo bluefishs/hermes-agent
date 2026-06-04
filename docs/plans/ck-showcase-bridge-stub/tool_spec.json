@@ -1,7 +1,8 @@
 {
   "toolset": "ck_showcase",
-  "description": "Governance bridge to CK_Showcase (8 managed projects): skills sync, agents, security scans, ADR map, managed projects, SSO status, governance health, platform metrics.",
-  "version": "0.1.0",
+  "description": "Governance bridge to CK_Showcase (8 managed projects): skills sync, agents, security scans, managed projects, SSO status, governance health, platform metrics. ADR 查詢委派獨立 ck-adr-query bridge（檔案式，讀 adrs/REGISTRY.md），本 bridge 不重複。",
+  "version": "0.1.2",
+  "_endpoint_reconcile": "2026-06-04 AaaP 端點一致性 audit（v0.1.2 整合優化 — ADR-0020 §Bridge 整合優化程序）：① v0.1.1 對齊 6 端點至實際 live 端點（managed_projects_list/governance_health/platform_metrics/skills_sync_status/agents_list/security_scan_run + sso_status 改指 integration-status，7/7 對 :5201 live 200 實測 2026-06-04）。② v0.1.2 移除 showcase_adr_map_query（原指 /api/adr-map/query 後端 404 = 死端點；ADR 查詢已由 ck-adr-query bridge 涵蓋，依關注點分離 + ADR-CK-003『介面非業務』移除而非新增重複後端端點）。本 bridge 全部端點皆確定性後端（介面層只轉述、不發 SQL），符合 ADR-0020 step 1。tools.py（CK_Hermes session）以本版為準。",
   "tools": [
     {
       "name": "showcase_managed_projects_list",
@@ -16,7 +17,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/overview/projects",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/integration-status",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json",
@@ -28,36 +29,6 @@
         "timeout_seconds": 30
       },
       "response": { "success_path": "projects", "error_path": "detail" }
-    },
-    {
-      "name": "showcase_adr_map_query",
-      "description": "查詢某受管專案的 ADR 知識地圖（狀態分布 + 最近 N 條）。Demo priority 2.",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "project_id": { "type": "string" },
-          "status_filter": { "type": "string", "enum": ["proposed", "accepted", "superseded"] },
-          "limit": { "type": "integer", "default": 10 },
-          "channel": { "type": "string" },
-          "session_id": { "type": "string" }
-        },
-        "required": ["project_id"]
-      },
-      "http": {
-        "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/adr-map/query",
-        "headers": {
-          "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "project_id": "${project_id}",
-          "status_filter": "${status_filter}",
-          "limit": "${limit:-10}"
-        },
-        "timeout_seconds": 30
-      },
-      "response": { "success_path": "recent", "error_path": "detail" }
     },
     {
       "name": "showcase_governance_health",
@@ -72,7 +43,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/overview/governance-health",
+        "url": "${SHOWCASE_BASE_URL}/api/skills/governance/summary",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json"
@@ -97,7 +68,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/overview/platform-metrics",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/stats",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json"
@@ -148,7 +119,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/agents/list",
+        "url": "${SHOWCASE_BASE_URL}/api/agents/query",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json"
@@ -175,7 +146,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/security/scan",
+        "url": "${SHOWCASE_BASE_URL}/api/security-center/scans/query",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json",
@@ -197,6 +168,7 @@
     {
       "name": "showcase_sso_status",
       "description": "查詢某受管專案 SSO / Auth middleware 狀態（provider / active users）。2026-04 Showcase SSO 尚未實作，先回 enabled=false。Phase 1 後置。",
+      "_reconcile_note": "2026-06-04 端點 audit：後端無 /api/system-config/sso-status（404）。SSO/identity 覆蓋實際是 integration-status 的 towers.identity + 各專案 integration_status.identity 欄位（身份塔 86%）→ 已改指 integration-status，tools.py 由 project_id 取對應 identity 欄位。",
       "schema": {
         "type": "object",
         "properties": {
@@ -206,7 +178,7 @@
       },
       "http": {
         "method": "POST",
-        "url": "${SHOWCASE_BASE_URL}/api/system-config/sso-status",
+        "url": "${SHOWCASE_BASE_URL}/api/overview/integration-status",
         "headers": {
           "Authorization": "Bearer ${SHOWCASE_API_TOKEN}",
           "Content-Type": "application/json"

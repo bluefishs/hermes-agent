@@ -63,6 +63,10 @@ Query:   ?since=YYYY-MM-DD&limit=N（選配，預設近 7 日）
 ### 段 B — 管道：CK_Hermes bridge 加薄 action（**CK_Hermes session，依賴 A**）
 > 純薄包，落 `CK_FORK_POLICY` L2（改 skill 內 script，不動 image、不需 rebuild）。
 
+> **✅ 2026-06-03 預寫已落地（CK_Hermes session）**：`memory_digest` action 已加進 live bind volume `C:\Users\User1\.hermes\skills\ck-missive-bridge\scripts\query.py`（容器 `/opt/data/...`，重啟沿用）。備份 `query.py.bak.20260603-pre-s3b`。同時補 query string 組裝（GET `query_args`，支援選配 `since`/`limit`）。
+> **實測（live 探針）**：`docker exec ck-hermes-gateway python3 …/query.py memory_digest` → action 已註冊、認證帶上、打到 `/api/ai/memory/digest`；**回 SPA HTML（非 JSON）**＝後端無此 route（SPA catch-all 接走）→ **正是「機制就緒、等段 A」的證明**（對齊 §1.2 缺口①）。`health` 回歸正常（`status:healthy`），未動 dispatch、未重啟 gateway。
+> ⚠️ **源頭治理落差**：live 是 `scripts/query.py`（218→235 行，stdlib），CK_Missive 部署包 `docs/hermes-skills/ck-missive-bridge/` 卻是 `tools.py`+`tool_spec.json` **另一套結構**——兩者未同源。本次只改 live；段 A 完成正式部署前，需決定 canonical 源（建議統一到 CK_Missive 部署包並重新部署，或反向把 live 收編進 repo）。
+
 - 在 `skills/ck-missive-bridge/scripts/query.py` 的 `ENDPOINTS` 加：
   ```python
   "memory_digest": {
@@ -117,9 +121,20 @@ Query:   ?since=YYYY-MM-DD&limit=N（選配，預設近 7 日）
 | 端到端 functional | `query.py agent_query`「公文總數」 | ✅ `ok/success:true`、1,821 份、`tools_used:[get_statistics]`、23s、無捏造 |
 | lvrland / kmap 後端 | `:8000` / `:8003`（猜測 host port） | ⚠️ 000（**host port 猜錯**，非服務下線；`docker ps` 顯示容器 healthy） |
 
-**bridge 後端設定複查**（gateway env）：
-- ✅ `MISSIVE_BASE_URL=http://host.docker.internal:8001`、`AAAP_BASE_URL=…:5201`、`MISSIVE_API_TOKEN`/`CK_LVRLAND_TOKEN` 在位。
-- ⚠️ **gateway env 無 `LVRLAND_BASE_URL` / `PILE_BASE_URL` / `OBS_*`**：lvrland/pile/observability bridge 在 gateway 側**後端 URL 未設定**（僅 lvrland 有 token）。若要激活該域 bridge（含 S3 N 域擴充），需先補這些 base URL。列為觀察，非本契約阻斷。
+**bridge 後端設定複查**（gateway env，2026-06-03 本 session live `docker exec env` 複測）：
+- ✅ 在位：`MISSIVE_BASE_URL=http://host.docker.internal:8001`、`AAAP_BASE_URL=…:5201`、`MISSIVE_API_TOKEN`、`CK_LVRLAND_TOKEN`、`MISSIVE_TIMEOUT_S=60`。
+- ⚠️ **缺**：`LVRLAND_BASE_URL` / `PILE_BASE_URL` / `OBS_*`（lvrland 有 token 無 URL；pile/observability 無 env）。
+
+**📋 gateway env 待補清單（含確切 host port，供外部/未來 session 執行 — 非本契約阻斷）**
+
+| 域 | 後端 host port（本 session `docker port` 確認）| 待補 env | CF Tunnel 公網 | 備註 |
+|---|---|---|---|---|
+| lvrland | `host.docker.internal:8002`（容器內 8000）| `LVRLAND_BASE_URL` | ⚠️ `lvrland.cksurvey.tw` 待用戶 CF Dashboard 綁 hostname（CLAUDE.md P0#2）| token 已有 |
+| pile | `host.docker.internal:8004`（容器內 8000）| `PILE_BASE_URL` + token | ⚠️ `pile.cksurvey.tw` 待 CF Tunnel | 無 env |
+| kmap | `host.docker.internal:8006` | （bridge 未列管）| — | — |
+| observability | grafana `127.0.0.1:13000` / prometheus `:19090` | `OBS_*`（結構與其他 bridge 不同）| — | bridge 形態待確認 |
+
+> ⚠️ **執行前提**：① query.py 的 `INTERNAL_HTTP_TO_HTTPS` 把內網 http 自動 upgrade 到**公網 HTTPS**（避 tirith plain-HTTP block）→ lvrland/pile bridge 即使補 `BASE_URL`，**公網鏈路仍須先綁 CF Tunnel** 才會通；② 補 env 需改 `hermes-stack` docker-compose 並**重啟 gateway**（會中斷 baseline 數秒）→ 屬需用戶確認的 production 變更，**勿在無人值守流程 blind 改**。
 
 **結論**：Hermes 整合面核心前後端（Missive 鏈路）**健康、baseline GO 此刻為真**；S3 缺口確認在「成長摘要端點」而非連通性。
 </content>

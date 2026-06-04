@@ -154,7 +154,7 @@
       - ❌ **但「真 tool → 確定性 dispatch」未成立、甚至更糟**：把 meta SOUL 指向 `missive_query` 後，3/3 probe 都**把 tool call 寫成文字**（`{"name":"missive_query",...}` as text）或宣告即停，且夾雜亂碼 token（`ilorc`/`incontri la regola`/`letal`）+ 简体。對比同問題 baseline `terminal` **3/3 真 dispatch**（回正確 1,819）。
       - **∴ 關鍵結論**：dispatch 不穩的瓶頸＝**模型/gateway 發 structured tool_call 的可靠度**（groq llama-3.3-70b 對自訂 MCP tool 比對熟悉的 baseline `terminal` **更不穩**），**非 terminal-vs-真tool 的差別**。**這同時預示 α（同樣靠模型發 tool_call）不會解決問題** → **暫不投入 α**。
       - 已還原 baseline（SOUL `.bak.20260603` / config `.bak.20260603-pre-mcp`），gateway 重啟回 terminal 3/3 GO 狀態。`mcp_server.py` 保留（無 config 即 inert）供未來參考。
-    - **dispatch 可靠度真正待解方向（重訂）**：① 強制 `tool_choice`（要求 API 層強制發 tool call，非靠 prompt）；② 換 tool-calling 更穩的模型；③ gateway 層 post-process「寫成文字的 tool call」轉真執行。三者皆屬 hermes runtime/fork 層，非 SOUL/config 可解。在此之前 dispatch 維持現況（terminal ~50-75%、GO + 失敗重試）。
+    - **dispatch 可靠度真正待解方向（2026-06-03 再重訂——① 已實作否決，見 [`adr-ck-005-dispatch-tool-choice-forcing.md`](adr-ck-005-dispatch-tool-choice-forcing.md)）**：~~① 強制 `tool_choice`~~ **❌ 否決**（patch 正確注入 `tool_choice`，但 groq llama-3.3-70b 不可靠遵守：4/7 真發 call、3/7 吐畸形文字，57% 落 baseline 區間，與 S2.5 同源失敗）；**③ gateway 層 post-process「寫成文字的 tool call」轉真執行 → 升首選**（model-agnostic，不靠模型保真度）；② 換 tool-calling 更穩模型（涉成本，次選）。三者皆屬 hermes runtime/fork 層，非 SOUL/config 可解。在此之前 dispatch 維持現況（terminal ~50-75%、GO + 失敗重試）。
 - **S3 Meta 統整能力**：定義並接通「Meta 讀各域意識體成長摘要」的管道（先 Missive：讀坤哥 Memory Wiki 摘要 → Meta 跨域 briefing）。
 - **S4 殘留收尾（非阻斷）**：dispatch 穩定度（groq 偶簡體/偶不執行）、延遲（~145-175s，架構性）、Telegram token。屬既有 GO 殘留，獨立處理。
 - **S5 同步既有文件**：更新 `D:\CKProject\CLAUDE.md`（已部分同步 6/2 GO）補本 ADR 架構連結；更新 ADR REGISTRY。
@@ -188,8 +188,9 @@
 
 ## 10. 待確認 / 待辦
 
-- [ ] 使用者確認本整合定調（§2 核心原則）。
+- [x] 使用者確認本整合定調（§2 核心原則）——2026-06-03 session 持續基於本架構推進（選定 S3 段 B 推進），視為已確認。
 - [ ] promote 為正式 `CK_AaaP#NNNN`（需 CK_AaaP session）。
-- [ ] S1 meta SOUL 語意對齊（需 CK_Hermes 動 production SOUL，先示明 + 備份）。
-- [ ] S3 Meta 統整管道設計。
-- [ ] 更新 ADR REGISTRY + CLAUDE.md 架構連結。
+- [x] ~~S1 meta SOUL 語意對齊~~ —— **❌ 否決並還原**（§7-S1：A/B 測試 0/3 vs baseline 3/3，prose 反傷 dispatch；語意已足，不需 prose 微調）。
+- [x] S3 Meta 統整管道**設計** ✅（[`s3-meta-federation-briefing-design.md`](s3-meta-federation-briefing-design.md)，三段契約）+ **段 B 預寫** ✅（2026-06-03，`memory_digest` action live 探針證機制就緒）；**剩段 A**（CK_Missive 開 digest 端點）→ 解鎖段 B live 驗 + 段 C。
+- [x] 更新 CLAUDE.md 架構連結 ✅（2026-06-03 本 session：6/3 delta + dispatch 三方向否決同步）；**ADR REGISTRY 待 promote 時於 CK_AaaP session 更新**。
+- [ ] dispatch 可靠度 runtime 決策：③ gateway post-process（首選）有界 spike — 待使用者裁示投入（① tool_choice 已 ADR-CK-005 否決）。

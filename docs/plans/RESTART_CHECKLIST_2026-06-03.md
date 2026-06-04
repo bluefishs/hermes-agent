@@ -22,7 +22,8 @@
 ## B. 今日（6/3）持久變更（皆在 bind volume `C:\Users\User1\.hermes` 或 repo，重啟自動沿用）
 
 1. **meta SOUL = baseline（未淨變更）**：今日試過 S1（代問語意改寫）與 S2.5（指向 missive_query），**A/B 測試皆否決、已全數還原**至 6/2 baseline。`grep` 確認：terminal 規則在、missive_query 殘留=0。備份齊全（`SOUL.md.bak.20260603` = 純 baseline）。
-2. **root config.yaml = baseline（未淨變更）**：S2.5 β 曾加 `mcp_servers.missive`，**已還原**（`grep mcp_servers = 0`）。主模型維持 groq `llama-3.3-70b-versatile`。備份 `config.yaml.bak.20260603-pre-mcp`。
+2. **root config.yaml = baseline（未淨變更）**：S2.5 β 曾加 `mcp_servers.missive`，**已還原**（`grep mcp_servers = 0`）。root config 主模型欄寫 groq `llama-3.3-70b-versatile`，但 ⚠️ **此欄對 `/v1` 不生效**——`active_profile=meta`，`/v1` 實載 `profiles/meta/config.yaml`（主模型 = ollama `qwen2.5:7b-ctx64k`，為現實主模型）。**root config 主模型與 active=meta 的 /v1 無關**（6/3 dashboard 查證、6/4 groq 70b 切換實測坐實，見 [`2026-06-03-hermes-ui-integration-review.md`](2026-06-03-hermes-ui-integration-review.md) §2/§2.5）。備份 `config.yaml.bak.20260603-pre-mcp`。
+7. **6/4 groq 70b 實驗 → 已還原（無淨變更）**：經授權把 **meta** config 主模型 qwen→groq `llama-3.3-70b` 並重啟 gateway 驗證——groq 真生效但**免費 tier TPM 12k < 每請求 20,427 token，首次後全 413/502 不可行**；已 `cp config.yaml.bak.20260603-pre-groq70b` 還原回 qwen（md5 一致）+ 重啟 + 端到端複驗 **1821 筆 GO**。∴ meta config 現 = qwen baseline，本實驗對重啟狀態零淨影響。
 3. **missive profile SOUL 加「架構定位（ADR-CK-003）」介面門面註記**（S2，保留）：非 active profile、不影響 dispatch。備份 `profiles/missive/SOUL.md.bak.20260603`。
 4. **`skills/ck-missive-bridge/mcp_server.py` 新增但 inert**：β spike 產物，因 config 已移除 `mcp_servers` 而**不被啟動**；保留供未來參考，重啟無作用。
 5. **文件（CK_Hermes repo）**：新增 `docs/plans/adr-ck-003-aaap-consciousness-federation.md`（意識體聯邦整合 ADR）+ 本 checklist。
@@ -32,7 +33,7 @@
 
 - **系統 baseline GO 維持**：`/v1`「公文幾份」→ agent 真跑 `terminal: query.py` → 回正確 **1,821 筆**（收文1259+發文562），與 ground truth 一致、無捏造。
 - **架構定調**：ADR-CK-003 意識體聯邦（各平臺後端為成長意識體 / Hermes 介面 / meta=AaaP 大腦 / 平臺定址），整合 `CK_Missive#0023·#0022·#0031` + `CK_AaaP#0020`。
-- **dispatch 可靠度結論**：S1（prose）與 S2.5（真 tool MCP）皆**未改善** dispatch（A/B：baseline terminal 3/3 ＞ missive_query 0/3）。瓶頸＝**模型發 structured tool_call 可靠度**（runtime/fork 層），非 SOUL/config 可解。**暫不投入 α**；真解方向＝強制 tool_choice／更穩模型／gateway post-process（見 ADR-CK-003 §7 S2.5）。
+- **dispatch 可靠度結論**：S1（prose）與 S2.5（真 tool MCP）皆**未改善** dispatch（A/B：baseline terminal 3/3 ＞ missive_query 0/3）。瓶頸＝**模型發 structured tool_call 可靠度**（runtime/fork 層），非 SOUL/config 可解。**暫不投入 α**；真解方向（**同日稍晚再更新**）：~~強制 tool_choice~~ 已 [`adr-ck-005-dispatch-tool-choice-forcing.md`](adr-ck-005-dispatch-tool-choice-forcing.md) **實作並否決**（groq 4/7 落 baseline 區間、不可靠遵守）→ **③ gateway post-process 升首選**（model-agnostic）／② 換更穩模型（見 ADR-CK-003 §7 S2.5 + §10）。
 
 ## D. 已知狀態（非阻斷，重啟不影響）
 
