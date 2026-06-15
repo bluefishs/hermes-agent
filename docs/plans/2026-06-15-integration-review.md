@@ -8,6 +8,8 @@
 
 ## 0. TL;DR（本次最大 delta）
 
+> 🔴 **重大發現（聚焦 chat 後揭露）**：**Hermes meta `/v1` 對話入口原本是壞的（HTTP 500 `Permission denied .../meta/.env`）**——baseline 探針走 root 直跑 query.py 繞過 gateway，掩蓋了「真人對話入口已斷」。根因＝meta profile 目錄被翻成 `root:root 700`、gateway(hermes uid) 鎖在門外。**已 durable 修復（`chown hermes:hermes`），/v1 對話復活 HTTP 200**。詳見 [`2026-06-15-meta-chat-restore.md`](2026-06-15-meta-chat-restore.md)。**此為「核心聚焦 chat 深化交流」最關鍵的一步**。
+
 **6/12 的 baseline 計數回歸（計數題吐泛用建議、不吐數字）6/15 未重現** — `query.py agent_query`「公文總數」**連測 3/3 全回確切數字 1847**，且 1847 = 後端 ground truth（`/health business_data.documents:1847`）**完全吻合、無捏造**，即使全部走弱模型 gemma4 fallback path。→ **WO-1 症狀自解（暫態消退）**，結構性 prompt 後綴建議仍在（非阻斷，降級為預防性）。其餘維持：版本無漂移、51 容器全 healthy、**S3 digest 仍 405（唯一外部阻斷不變）**。
 
 ---
