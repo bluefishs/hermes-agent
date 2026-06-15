@@ -32,12 +32,26 @@ meta 大腦（`profiles/meta`）的 SOUL 承諾「我記得昨天、上週、上
 4. **解層 4（權限）**：cron 檔 + profile scripts 目錄 `chown hermes`。
 5. **端到端驗證**：`hermes cron tick` 對兩 cron 各跑一次 → `last_status: ok`、wiki 檔正確產出。✅
 
-## 尚待啟用（解層 2 — 排程驅動，唯一剩項）
+## 排程驅動（解層 2）— ✅ 本機已啟用（2026-06-15）
 
-gateway 內建排程器不 tick，但**外部 `hermes cron tick` 已證可執行到期 job**，只需週期驅動：
-- 機制：`hermes cron tick` 跑「到期 job 一次」即退出（未到期 no-op、極輕量；file-lock 保證 at-most-once，與任何其他 ticker 並存安全）。
-- 安裝：見 [`tick-driver.sh`](tick-driver.sh)，每 1–5 分鐘呼叫一次。**推薦落 CK_AaaP hermes-stack sidecar**（隨 stack 起落、最 durable、版控於 compose）；本機可暫用 Windows 工作排程器或 WSL 背景 loop 過渡。
-- 裝好後 R2 即**全自動**：每日 23:00 寫 daily、07:30 寫 morning briefing，meta 對話可引用「昨天/上週」。
+gateway 內建排程器不 tick，但**外部 `hermes cron tick` 已證可執行到期 job**（file-lock 保 at-most-once、與其他 ticker 並存安全）。
+
+**本機過渡方案已安裝並 end-to-end 驗證**：Windows 工作排程器任務 `CK-Hermes-Cron-Tick`，每 5 分鐘跑 [`tick-driver.ps1`](tick-driver.ps1) → `hermes cron tick`。驗證：強制 daily-closing 到期 → Start-ScheduledTask → `LastTaskResult=0` + daily wiki 檔由 task 驅動的 tick 正確產出。∴ R2 **全自動**：每日 23:00 TPE 寫 daily、07:30 TPE 寫 morning briefing。
+
+**長期歸宿（建議遷移）**：CK_AaaP hermes-stack sidecar（每 1–5 分鐘 `hermes cron tick`，版控於 compose、隨 stack 起落、跨機器可攜）。遷移後可移除本機 Windows 任務（雙驅動因 file-lock 安全，但無必要）。
+
+### Windows 任務管理（PowerShell）
+```powershell
+# 查狀態 / 上次結果
+Get-ScheduledTask  -TaskName CK-Hermes-Cron-Tick
+Get-ScheduledTaskInfo -TaskName CK-Hermes-Cron-Tick   # LastTaskResult 應 0
+# 立即跑一次（手動）
+Start-ScheduledTask -TaskName CK-Hermes-Cron-Tick
+# 移除（遷 sidecar 後）
+Unregister-ScheduledTask -TaskName CK-Hermes-Cron-Tick -Confirm:$false
+# 重新安裝：見本檔末「重啟後一鍵復原」或 git log feat(meta) R2 commit 的註冊指令
+```
+> ⚠️ 任務跨重啟存活（`-StartWhenAvailable` + 3650 天重複），但依賴 Docker Desktop 已啟動（登入後自動起）。重啟後若 cron 凍結，先跑 `setup-cron.sh` 再確認任務 State=Ready。
 
 ## 重啟後一鍵復原
 

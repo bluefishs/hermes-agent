@@ -48,9 +48,12 @@ docker exec ck-hermes-gateway sh -c 'KEY=$(printenv API_SERVER_KEY); curl -s -m 
 cd CK_Hermes/docs/plans/meta-memory-engine && bash setup-cron.sh   # 佈 writer 到 profile + 冪等註冊兩 cron + chown
 # 驗證（強制跑一次）：
 docker exec -e HERMES_HOME=/opt/data -u 10000:10000 ck-hermes-gateway /opt/hermes/.venv/bin/hermes cron list   # 應見 daily-closing-v5 / daily-awakening-v2 active
-# 啟用週期驅動：見 meta-memory-engine/tick-driver.sh（sidecar 或 Windows 工作排程器）
+# 週期驅動：本機已裝 Windows 工作排程器 CK-Hermes-Cron-Tick（每 5min hermes cron tick）
+docker exec ck-hermes-gateway sh -c 'true'  # 確認 Docker Desktop 已起（任務依賴）
+# PowerShell 驗任務：Get-ScheduledTaskInfo -TaskName CK-Hermes-Cron-Tick  (LastTaskResult 應 0)
 ```
-詳見 [`meta-memory-engine/README.md`](meta-memory-engine/README.md)（四層根因 + 復原）。
+詳見 [`meta-memory-engine/README.md`](meta-memory-engine/README.md)（四層根因 + 復原 + Windows 任務管理）。
+> 重啟後：任務 `-StartWhenAvailable` 會自動續跑（依賴 Docker Desktop 登入後自起）；若 cron 凍結先跑 setup-cron.sh。長期建議遷 hermes-stack sidecar（CK_AaaP）。
 
 ## E. 已知狀態（非阻斷，同 6/9）
 
