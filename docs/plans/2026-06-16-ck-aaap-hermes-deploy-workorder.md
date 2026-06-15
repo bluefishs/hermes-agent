@@ -10,8 +10,10 @@
 
 ## DA-1 · P1 · R1 繁簡後處理上線（解簡體洩漏）
 
-### 現況
-程式碼已就緒於 CK_Hermes（commit `22586ef0a`）：`gateway/zh_convert.py` + `api_server.py` 接入 + `pyproject.toml` `zh` extra + tests 11/11。**預設關閉、部署解耦**（未裝 opencc 或未設 env 時 no-op）。live gateway 仍會偶洩簡體（qwen 弱）。
+> ⚡ **2026-06-16 已 runtime 啟用（過渡）**：直接在運行中 gateway 注入 R1（`uv pip install opencc==1.3.1` 進 venv + 注入 `gateway/zh_convert.py`〔runtime 版預設 s2twp〕+ api_server.py 套 3 處編輯 + `docker restart`）→ `is_enabled:True`、`/v1` 回應**全繁中零簡體**實證（「聊天记录/检索/通过」→「對話記錄/檢索/透過」）。備份 `api_server.py.bak.20260616-pre-r1`。**持久化邊界**：runtime patch 存於容器 writable layer，**存活 `docker restart`／機器重啟（unless-stopped）**，但 **`compose up --force-recreate`／image pull 會丟失** → 本 DA-1（image rebuild）使其永久化+版控。
+
+### 現況（程式碼）
+程式碼已就緒於 CK_Hermes（commit `22586ef0a`）：`gateway/zh_convert.py` + `api_server.py` 接入 + `pyproject.toml` `zh` extra + tests 11/11。**預設關閉、部署解耦**（未裝 opencc 或未設 env 時 no-op）。
 
 ### 步驟
 1. image build 納入 `.[zh]`（裝 `opencc>=1.1,<2`）——hermes-stack Dockerfile 的 `pip install` 加 `zh` extra，或 requirements 追加 `opencc`。
