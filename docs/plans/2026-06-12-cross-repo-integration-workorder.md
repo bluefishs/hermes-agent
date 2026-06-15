@@ -7,7 +7,9 @@
 
 ---
 
-## WO-1 · P0 · 修 baseline 計數回歸（CK_Missive session）
+## WO-1 · ~~P0~~ → P1 預防性 · 修 baseline 計數回歸（CK_Missive session）
+
+> **6/15 狀態更新**：症狀**未重現** — `query.py agent_query`「公文總數」**連測 3/3 全回確切數字 1847**（=ground truth `documents:1847`，probe2 拆 1281 收文+566 發文），即使全走弱模型 gemma4。→ 6/12 的「吐建議無數字」屬**暫態**、已消退。**降為 P1 預防性**：結構性「決定性短路」（修法 1）仍建議做，防弱模型未來再吞數字 + 治 gemma4「數字後綴泛用建議」觀感；非阻斷。詳見 [`2026-06-15-integration-review.md`](2026-06-15-integration-review.md)。
 
 ### 根因（6/12 讀碼鎖定，非純暫態）
 `CK_Missive/backend/app/services/ai/agent/agent_synthesis.py:106-134` 合成 system_prompt 明文：
