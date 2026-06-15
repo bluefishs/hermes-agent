@@ -77,7 +77,13 @@ docker exec ck-hermes-gateway sh -c 'chown 10000:10000 /opt/data/profiles/*'
 - 入 [`RESTART_CHECKLIST`](RESTART_CHECKLIST_2026-06-09.md)：重啟後驗 `ls -lad /opt/data/profiles/meta` 應為 `hermes hermes`；若 root 則 `chown 10000:10000`。並加一條 functional 驗證：`/v1 model=meta` 必須 HTTP 200（非僅 healthcheck）。
 
 ### P1 深化交流（依序）
-1. **R1 繁簡一致性**：在 gateway 回應層加輕量繁簡轉換後處理（OpenCC s2twp），model-agnostic、零模型成本 → 直接解簡體洩漏。**這是「深化交流」CP 最高的一步**（體感最大、成本最低）。落 CK_Hermes（gateway 回應 middleware）。
+1. **R1 繁簡一致性 — ✅ 程式碼就緒（2026-06-15，待部署）**：在 gateway 回應層加 OpenCC s2twp 後處理，model-agnostic、零模型成本 → 直接解簡體洩漏。**深化 CP 最高一步**。已實作於 CK_Hermes：
+   - `gateway/zh_convert.py`（純函式、env `HERMES_ZH_CONVERT` 開關、opencc 未裝/出錯皆優雅降級為 no-op）
+   - `gateway/platforms/api_server.py` 接入非串流（`final_response`）+ 串流（delta）兩路徑
+   - `pyproject.toml` 加 `zh = ["opencc>=1.1,<2"]` extra
+   - `tests/test_zh_convert.py` 11/11 綠（含真實簡→繁驗證 + 優雅降級 + 預設關閉）
+   - **實證**：對 live 洩漏文字跑 s2twp → 「主脑→主腦/聊天记录→聊天記錄/检索历史信息→檢索歷史資訊/通过→透過」全修，含台灣用語在地化。
+   - **部署（落 CK_AaaP hermes-stack）**：image build 裝 `.[zh]`（opencc）+ 設 `HERMES_ZH_CONVERT=s2twp` 於 ck-hermes-gateway env → rebuild + redeploy。**設計保證安全**：未設 env 或未裝 opencc 時為 no-op，故程式碼可先合併、部署解耦。
 2. **R2 記憶引擎復原**：(a) 釐清重啟後排程器為何不重載 jobs.json；(b) 解 qwen 「empty response」（writer 腳本 script-driven，應 `--no-agent` 純腳本跑、不經 qwen 生成 → 繞過空回應）；(c) **把 cron 定義納版控**（現只存 runtime jobs.json，vanish 後無法從 repo 復原）。落 CK_Hermes/meta。
 3. **R3 / 模型**：維持 qwen（TPM 牆使 groq 對 /v1 不可行）；延遲架構性接受。
 

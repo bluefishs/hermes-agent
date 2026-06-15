@@ -45,6 +45,9 @@ except ImportError:
     web = None  # type: ignore[assignment]
 
 from gateway.config import Platform, PlatformConfig
+# CK fork: optional zh-TW (繁簡) post-processing safety net for assistant output.
+# No-op unless HERMES_ZH_CONVERT is set AND opencc is installed. See gateway/zh_convert.py.
+from gateway.zh_convert import convert_zh
 from gateway.platforms.base import (
     BasePlatformAdapter,
     SendResult,
@@ -1283,6 +1286,8 @@ class APIServerAdapter(BasePlatformAdapter):
                 )
 
         final_response = result.get("final_response") or ""
+        # CK fork: normalise assistant text to zh-TW (繁體) when configured. No-op by default.
+        final_response = convert_zh(final_response)
         is_partial = bool(result.get("partial"))
         is_failed = bool(result.get("failed"))
         completed = bool(result.get("completed", True))
@@ -1421,10 +1426,13 @@ class APIServerAdapter(BasePlatformAdapter):
                         f"event: hermes.tool.progress\ndata: {event_data}\n\n".encode()
                     )
                 else:
+                    # CK fork: per-chunk zh-TW (繁簡) normalisation. No-op by default.
+                    # Char-level 簡→繁 works per-chunk; cross-chunk phrase localisation
+                    # may be missed, which is acceptable for a leak-prevention net.
                     content_chunk = {
                         "id": completion_id, "object": "chat.completion.chunk",
                         "created": created, "model": model,
-                        "choices": [{"index": 0, "delta": {"content": item}, "finish_reason": None}],
+                        "choices": [{"index": 0, "delta": {"content": convert_zh(item)}, "finish_reason": None}],
                     }
                     await response.write(f"data: {json.dumps(content_chunk)}\n\n".encode())
                 return time.monotonic()
