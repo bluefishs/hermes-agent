@@ -84,7 +84,7 @@ docker exec ck-hermes-gateway sh -c 'chown 10000:10000 /opt/data/profiles/*'
    - `tests/test_zh_convert.py` 11/11 綠（含真實簡→繁驗證 + 優雅降級 + 預設關閉）
    - **實證**：對 live 洩漏文字跑 s2twp → 「主脑→主腦/聊天记录→聊天記錄/检索历史信息→檢索歷史資訊/通过→透過」全修，含台灣用語在地化。
    - **部署（落 CK_AaaP hermes-stack）**：image build 裝 `.[zh]`（opencc）+ 設 `HERMES_ZH_CONVERT=s2twp` 於 ck-hermes-gateway env → rebuild + redeploy。**設計保證安全**：未設 env 或未裝 opencc 時為 no-op，故程式碼可先合併、部署解耦。
-2. **R2 記憶引擎復原**：(a) 釐清重啟後排程器為何不重載 jobs.json；(b) 解 qwen 「empty response」（writer 腳本 script-driven，應 `--no-agent` 純腳本跑、不經 qwen 生成 → 繞過空回應）；(c) **把 cron 定義納版控**（現只存 runtime jobs.json，vanish 後無法從 repo 復原）。落 CK_Hermes/meta。
+2. **R2 記憶引擎復原 — ✅ 引擎/cron/tick 已驗證（2026-06-15），僅剩週期驅動**：四層根因鎖定並修齊——①agent 模式 413→`--no-agent`②腳本須在 profile scripts 目錄→已佈③cron 檔 hermes 擁有→已 chown④gateway 內建排程器不 tick→外部 `hermes cron tick` **已證可端到端執行**（兩 cron `last_status: ok`、wiki 檔正確產出）。**納版控完成**：`docs/plans/meta-memory-engine/`（writer 鏡像 + setup-cron.sh 冪等復原 + tick-driver.sh + 完整診斷 README）。**唯一剩項**＝裝週期 tick 驅動（每 1-5 分鐘 `hermes cron tick`），推薦 CK_AaaP hermes-stack sidecar、本機可暫用 Windows 工作排程器。裝好即全自動兌現「記得昨天/上週」。
 3. **R3 / 模型**：維持 qwen（TPM 牆使 groq 對 /v1 不可行）；延遲架構性接受。
 
 ### 與既有規劃的關係

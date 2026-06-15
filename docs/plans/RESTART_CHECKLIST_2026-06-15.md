@@ -40,6 +40,17 @@ docker exec ck-hermes-gateway sh -c 'KEY=$(printenv API_SERVER_KEY); curl -s -m 
 ## D. 持久化建議（落 CK_AaaP / hermes-stack）
 
 - entrypoint 啟動時對 **所有 `profiles/*`** 強制 `chown hermes:hermes`（現「top-level 已 hermes 就跳過遞迴」最佳化會漏修子目錄）→ 使重啟自動自癒、免人工 §A 修。
+- **R2 tick 驅動 sidecar**：hermes-stack 加一個每 1-5 分鐘跑 `hermes cron tick` 的 sidecar（gateway 內建排程器在 Docker 不 tick）→ meta 記憶引擎全自動。
+
+## D2. R2 記憶引擎重啟後復原（cron 凍結時）
+
+```bash
+cd CK_Hermes/docs/plans/meta-memory-engine && bash setup-cron.sh   # 佈 writer 到 profile + 冪等註冊兩 cron + chown
+# 驗證（強制跑一次）：
+docker exec -e HERMES_HOME=/opt/data -u 10000:10000 ck-hermes-gateway /opt/hermes/.venv/bin/hermes cron list   # 應見 daily-closing-v5 / daily-awakening-v2 active
+# 啟用週期驅動：見 meta-memory-engine/tick-driver.sh（sidecar 或 Windows 工作排程器）
+```
+詳見 [`meta-memory-engine/README.md`](meta-memory-engine/README.md)（四層根因 + 復原）。
 
 ## E. 已知狀態（非阻斷，同 6/9）
 
