@@ -5,6 +5,8 @@
 > 政策：[[feedback_integration_over_scope]]、[[feedback_pre_demo_functional_verification]]（每件附 functional DoD）、Session 分流（CONVENTIONS §7）
 
 > 前置確認（2026-06-16 live）：51 容器 healthy、hermes 核心 v2026.5.22 無漂移；chat 機制 /v1 meta 200；**UI 端到端通**（Open WebUI :3010 → `hermes-gateway:8642/v1` → meta，models+chat 均 200、認證走 secret）；R2 記憶引擎昨晚自主 fire（daily-closing ok）、Windows 任務每 5min 正常。
+>
+> 🔄 **2026-06-17 更新（本機重啟後複驗）**：本機 6/16 重啟揭露並修復 **DA-4 NVIDIA hook P0 故障**（wsl --shutdown）；health-smoke 哨兵 8/8 PASS、keep-warm + 開機驗證任務雙雙 live（commit `7e06d2f50`）。本工單新增 **DA-4/5/6**（NVIDIA hook 韌性 / keep-warm 永久化 / 健康哨兵容器化），把今日新增的本機過渡層一併納永久化。
 
 ---
 
@@ -60,12 +62,57 @@ R2 記憶引擎已復原並**本機 Windows 工作排程器 `CK-Hermes-Cron-Tick
 
 ---
 
+## DA-4 · P0 · NVIDIA Container Toolkit hook 韌性（防 GPU 推論全斷）
+
+> ⚡ **2026-06-16 PM 實際發生並已本機修復**：本機重啟後 NVIDIA Container Toolkit 的 OCI prestart hook 崩潰（`ld.so _dl_setup_hash` 斷言、驅動 610.47 + WSL2 toolkit）→ ck-ollama 無法以 GPU 啟動、runner 崩潰 ×18、**所有 LLM 推論逾時、/v1 全 499**，但 healthcheck（`ollama list`）仍綠掩蓋。`docker restart` 反把容器停成 Exited（確定性崩潰）。**正解＝`wsl --shutdown` 重啟 Docker 引擎 re-init toolkit**（已驗證）。詳見 [`2026-06-16-post-restart-ollama-nvidia-hook-incident.md`](2026-06-16-post-restart-ollama-nvidia-hook-incident.md)。
+
+### 步驟（永久韌性）
+1. **偵測**：stack 內健康哨兵（見 DA-6）週期檢「`docker logs ck-ollama` 近 5min 有無 `Inconsistency detected by ld.so`」+「真推論 200」→ 非 healthcheck。
+2. **環境固化**：runbook 記錄相依版本下限（Docker Desktop / NVIDIA Container Toolkit ≥ 對應驅動 610.47 的相容版），重啟後若再現先 `wsl --shutdown`，仍崩則升級 toolkit。
+3. **告警**：哨兵偵測到崩潰 → log/通知（不在容器內自動 `wsl --shutdown`，屬 host 層）。
+
+### DoD（functional）
+- 模擬：`docker logs` 含 ld.so 崩潰時，哨兵在 1 輪內標 CRITICAL 並輸出「須 wsl --shutdown」。
+- runbook 有「重啟後 GPU 推論斷」SOP（指向 §C-G + wsl 修復）。
+
+---
+
+## DA-5 · P2 · keep-warm 永久化（降冷啟動延遲）
+
+> ⚡ **2026-06-16 PM 已本機 live**（內建 `tick-driver.ps1`，commit `7e06d2f50`）：ollama `OLLAMA_KEEP_ALIVE=30m`，閒置卸載主模型 → 下次 /v1 冷啟動可達 240s 逾時。本機過渡＝既有 5min tick 順帶「qwen 不在 GPU 就 re-warm」（自我限制、實測 1s 跳過/11s re-warm）。
+
+### 步驟（永久化）
+- ollama compose 設 `OLLAMA_KEEP_ALIVE=-1`（永不卸載，主模型常駐 GPU）或由 DA-2/DA-6 sidecar 週期 re-warm。
+- 二擇一：`-1` 最簡（代價：~5GB GPU 常駐）；sidecar re-warm 較省（卸載後才載）。
+
+### DoD
+- 閒置 >35min 後首次 /v1 對話延遲 ≈ 暖機（~45s）而非冷啟動（>120s）。
+
+---
+
+## DA-6 · P1 · 健康哨兵 sidecar（functional smoke 容器化）
+
+> ⚡ **2026-06-16 PM 本機過渡已 live**：`meta-memory-engine/health-smoke.ps1`（8 檢查 §C+§C-G、記 log、可 `-AutoRemediate`）+ Windows 任務 `CK-Hermes-Health-Smoke`（開機後 3min）。但屬本機、不可攜、未版控於 stack。
+
+### 步驟
+- 把 health-smoke 8 檢查（GPU hook/ollama 推論/meta 權限/R1/R2 cron/UI/v1）移植成 stack 內 sidecar 或 CI smoke（同網路、hermes uid）：週期跑 + 結果推 Prometheus/Loki（已有 PLG 觀測棧）→ Grafana 面板 + Alertmanager 告警。
+- 與 DA-2 tick sidecar 可合一（同一 ops sidecar 跑 cron tick + keep-warm + health smoke）。
+
+### DoD
+- sidecar 跑後 Grafana 見 8 檢查狀態時序；故意斷一項（如 chown root meta）→ Alertmanager 告警。
+
+---
+
 ## 優先序
 
 ```
-P0  DA-3 權限持久化   ← 防 chat 入口再死（最高，影響可用性）
-P1  DA-1 R1 繁簡上線  ← 深化交流體感最大、CP 最高
-P1  DA-2 tick sidecar ← R2 跨機可攜、移除本機過渡任務
+P0  DA-3 權限持久化       ← 防 chat 入口再死（權限翻 root）
+P0  DA-4 NVIDIA hook 韌性 ← 防 GPU 推論全斷（6/16 實際發生）
+P1  DA-1 R1 繁簡上線      ← 深化交流體感最大、CP 最高
+P1  DA-2 tick sidecar     ← R2 跨機可攜、移除本機過渡任務
+P1  DA-6 健康哨兵 sidecar ← functional smoke 容器化 + 接 PLG 告警（可與 DA-2 合一）
+P2  DA-5 keep-warm 永久化 ← 降冷啟動延遲（本機已 live，永久化即設定）
 ```
 
+> 本機過渡層現況（commit `7e06d2f50`，重啟存活但 `--force-recreate`/image-pull 丟失）：R1 繁簡 patch / R2 cron+tick / meta 權限 chown / **keep-warm（tick 內建）/ health-smoke 哨兵（開機任務）**。DA-1~6 即把這整層遷成隨 stack 版控。
 > 另：WO-2（CK_Missive 開 `/api/ai/memory/digest`，S3 唯一外部阻斷）與 WO-3（WS-D 業務分流）維持原工單，與本工單互補（事實歸後端、對話歸 meta）。
