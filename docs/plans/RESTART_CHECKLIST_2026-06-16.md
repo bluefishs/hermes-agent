@@ -24,7 +24,7 @@
 | **R2 tick 驅動**（Windows 任務 CK-Hermes-Cron-Tick）| Windows 工作排程器 | ✅ `StartWhenAvailable` 自動續（依賴 Docker Desktop 登入後自起）| n/a | 見 meta-memory-engine/README §Windows 任務管理 |
 | **SOUL**（D-α/D-β 實測負向）| — | 已**還原**至 `SOUL.md.bak.20260616-pre-recall`，**無淨變更** | — | 備份齊（pre-recall / pre-mcptool / 20260602…）|
 
-> 結論：**機器重啟（unless-stopped）下，R1 + R2 + 權限全部存活**；唯一須人工的是「若 host 把 meta 翻 root」→ §C-1 一行修。**切勿 `--force-recreate`**（會丟 R1 runtime patch 與 opencc）。
+> 結論：**機器重啟（unless-stopped）下，R1 + R2 + 權限全部存活**；須人工的有**兩項**：①「若 host 把 meta 翻 root」→ §C-1 一行修；②**「若 NVIDIA hook 崩潰（GPU 推論全斷）」→ §C-G `wsl --shutdown` 修**（6/16 PM 實際發生並已驗證修復）。**切勿 `--force-recreate`**（會丟 R1 runtime patch 與 opencc）；**切勿用 `docker restart ck-ollama` 修 GPU hook**（確定性崩潰，restart 只會停容器）。
 
 ## C. 重啟後驗證（功能級，缺一不可 — healthcheck≠functional）
 
@@ -44,6 +44,27 @@ docker exec -e HERMES_HOME=/opt/data -u 10000:10000 ck-hermes-gateway /opt/herme
 # C-4 UI 服務
 # 瀏覽器開 http://localhost:3010 (Open WebUI)；或 curl -o /dev/null -w "%{http_code}" http://localhost:3010 → 200
 ```
+
+## C-G. GPU/推論探針（2026-06-16 PM 新增 — 重啟後 ollama NVIDIA hook 崩潰事故催生）
+
+> ⚠️ **新增背景**：6/16 本機重啟後 NVIDIA Container Toolkit prestart hook 崩潰（`ld.so _dl_setup_hash` 斷言，驅動 610.47 + WSL2 toolkit），ck-ollama 無法以 GPU 啟動、**所有推論逾時、/v1 全 499**，但容器 healthcheck（`ollama list` 不載模型）仍綠 → 假象。C-1「/v1 200」雖能抓到但表現為慢逾時易誤判。**故新增直接 GPU/推論探針**。詳見 [`2026-06-16-post-restart-ollama-nvidia-hook-incident.md`](2026-06-16-post-restart-ollama-nvidia-hook-incident.md)。
+
+```bash
+# G-1 ollama runner 未崩潰（最關鍵）
+docker logs ck-ollama --since 5m 2>&1 | grep -c "Inconsistency detected by ld.so"   # 期望 0；>0 = hook 崩潰
+# G-2 ollama 真推論（functional，非 healthcheck）
+docker exec ck-hermes-gateway sh -c 'curl -s -m 60 http://ck-ollama:11434/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"qwen2.5:7b-ctx64k\",\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}],\"max_tokens\":10}" -o /dev/null -w "%{http_code}\n"'   # 期望 200
+```
+
+**若 G-1 > 0 或 G-2 ≠ 200（GPU hook 崩潰）→ 復原程序（已驗證有效）：**
+```powershell
+# PowerShell：重啟 WSL2 + Docker 引擎（re-init NVIDIA Container Toolkit）
+wsl --shutdown            # docker-desktop distro 停止；Docker Desktop app 會自動重啟引擎
+# 等 docker info 恢復（約數秒~1min），unless-stopped 容器自動回；ck-ollama 若是 Exited 需手動 docker start ck-ollama
+# 重跑 G-1/G-2 + C-1 確認 200。R1/權限/R2 皆存活（已驗證）。
+# 若 wsl 重啟仍崩潰 → 更新 Docker Desktop / NVIDIA Container Toolkit，或回退 GPU 驅動。
+```
+> ⚠️ 切勿用 `docker restart ck-ollama` 當修復——hook 崩潰是確定性的，restart 只會把容器停成 Exited（已實測）。正解是 wsl 引擎層重啟。
 
 ## D. 本 session 成果（重啟後應維持）
 

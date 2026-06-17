@@ -85,3 +85,6 @@ docs/plans/_demo_payload.json
 /_*.py
 /_*.md
 /_*.json
+
+# Hermes 健康哨兵執行產物（非原始碼）
+docs/plans/meta-memory-engine/health-smoke.log

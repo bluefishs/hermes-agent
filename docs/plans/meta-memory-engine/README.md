@@ -72,6 +72,35 @@ bash setup-cron.sh
 | `daily-closing-writer.py` / `daily-awakening-writer.py` | 版控鏡像（live 源 `/opt/data/scripts/`）。純 Python、idempotent |
 | `setup-cron.sh` | 冪等註冊兩 cron（--no-agent / deliver local / hermes 擁有） |
 | `tick-driver.sh` | 外部 tick 驅動（解排程器不 tick），每分鐘呼叫 |
+| `health-smoke.ps1` | **重啟後 functional smoke 哨兵**（標準化 §C+§C-G 驗證，見下節） |
+| `health-smoke.log` | smoke 每次執行的單行摘要（append，便於趨勢/grep） |
+
+## 重啟後 functional smoke 哨兵（health-smoke.ps1）— 2026-06-16 PM
+
+> 緣由：本機重啟是 CK 平臺反覆風險源——6/15 bind mount 權限翻 root（/v1 500）、6/16 NVIDIA Container Toolkit hook 崩潰（推論全斷、/v1 全 499）。兩者共通＝**healthcheck 仍綠但 functional 已死**，唯端到端功能探針能抓。本腳本把 [`../RESTART_CHECKLIST_2026-06-16.md`](../RESTART_CHECKLIST_2026-06-16.md) §C+§C-G 編碼成可執行哨兵，取代「靠人記得手動跑 checklist」。詳見 [`../2026-06-16-post-restart-ollama-nvidia-hook-incident.md`](../2026-06-16-post-restart-ollama-nvidia-hook-incident.md)。
+
+**驗 7 項**：G-1 NVIDIA hook 未崩潰 / G-2 ollama 真推論（`ollama run`，非 healthcheck）/ C-1a meta 權限 / C-2 R1 繁簡 / C-3 R2 cron / C-3b tick 任務 / C-4 Open WebUI（+ 完整模式 C-1b /v1 meta chat 200）。輸出逐項 PASS/WARN/FAIL + 寫 `health-smoke.log`；退出碼 0/1/2。
+
+```powershell
+# 手動跑（完整含 /v1 ~50s）
+powershell -NoProfile -ExecutionPolicy Bypass -File health-smoke.ps1
+# 快速（跳過慢 /v1，~15s；G-2 的 ollama run 會順帶 keep-warm 主模型）
+powershell ... -File health-smoke.ps1 -Quick
+# 偵測 NVIDIA hook 崩潰時自動跑 wsl 修復（破壞性：全容器循環）
+powershell ... -File health-smoke.ps1 -AutoRemediate
+```
+
+**註冊開機自動驗（需提權 PowerShell — Register-ScheduledTask/schtasks 在非提權 session 被 Access denied）**：
+```powershell
+# 方式 A：用腳本自註冊（登入後延遲 3 分鐘跑完整 smoke）
+powershell -NoProfile -ExecutionPolicy Bypass -File "D:\CKProject\CK_Hermes\docs\plans\meta-memory-engine\health-smoke.ps1" -Register
+# 方式 B：schtasks 等價（亦可改 /sc MINUTE /mo 25 跑 -Quick 當「健康趨勢 + keep-warm」雙用）
+schtasks /create /tn "CK-Hermes-Health-Smoke" /tr "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"D:\CKProject\CK_Hermes\docs\plans\meta-memory-engine\health-smoke.ps1\"" /sc ONLOGON /delay 0003:00 /f
+# 查/移除
+Get-ScheduledTask -TaskName CK-Hermes-Health-Smoke ; Unregister-ScheduledTask -TaskName CK-Hermes-Health-Smoke -Confirm:$false
+```
+
+> 💡 **免費 keep-warm 優化（降冷啟動延遲）— 2026-06-16 PM 已內建於 [`tick-driver.ps1`](tick-driver.ps1)**：ollama `OLLAMA_KEEP_ALIVE=30m`，閒置 >30min 卸載主模型 → 下次 /v1 冷啟動可達 240s 逾時（6/16 實見）。既有每 5 分鐘的 `CK-Hermes-Cron-Tick` 現在順帶檢查：qwen 不在 GPU 就 `ollama run` re-warm（已載入則 `ollama ps` 秒判跳過＝自我限制、不長holdGPU 也不需新任務/提權）→ chat 幾乎永遠走「暖機 ~45s」而非「冷啟動逾時」。**實測**：卸載後跑 tick → 11s 內 qwen 回到 GPU（`29 minutes from now`）。零成本、純整合層、不動 compose。若要「零冷啟動」可把 tick 的 re-warm 改為無條件 ping（代價：模型 24/7 常駐）。長期歸宿仍是 CK_AaaP hermes-stack 內建（DA 系列）。
 
 ## 後續加值（非必要）
 
