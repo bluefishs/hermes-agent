@@ -109,6 +109,12 @@ RUN chmod -R a+rX /opt/hermes && \
 # this a fast (~1s) egg-link creation with no resolution or downloads.
 RUN uv pip install --no-cache-dir --no-deps -e "."
 
+# ---------- DA-1（2026-06-17 部署工單 P1）：R1 繁簡後處理依賴 ----------
+# OpenCC 供 gateway/zh_convert.py 把 /v1 回應簡體→繁中（s2twp）；解 qwen 弱模型簡體洩漏。
+# 預設關閉、部署解耦：未設 HERMES_ZH_CONVERT env 時 zh_convert no-op（裝了也不影響）。
+# 永久化本機 6/16 runtime patch（uv pip install opencc + 注入），使 --force-recreate/pull 不丟失。
+RUN uv pip install --no-cache-dir "opencc>=1.1,<2"
+
 # ---------- Runtime ----------
 ENV HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist
 ENV HERMES_HOME=/opt/data
