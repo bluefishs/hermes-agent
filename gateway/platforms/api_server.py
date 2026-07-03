@@ -48,6 +48,10 @@ from gateway.config import Platform, PlatformConfig
 # CK fork: optional zh-TW (繁簡) post-processing safety net for assistant output.
 # No-op unless HERMES_ZH_CONVERT is set AND opencc is installed. See gateway/zh_convert.py.
 from gateway.zh_convert import convert_zh
+# CK fork: /v1 business-query dispatch safety net — detect a text-ified query.py
+# agent_query tool call / fabrication and backfill the real answer.
+# No-op unless HERMES_V1_DISPATCH_FIX is set. See gateway/dispatch_intercept.py.
+from gateway import dispatch_intercept
 from gateway.platforms.base import (
     BasePlatformAdapter,
     SendResult,
@@ -1286,6 +1290,18 @@ class APIServerAdapter(BasePlatformAdapter):
                 )
 
         final_response = result.get("final_response") or ""
+        # CK fork: intercept a text-ified business-query dispatch → run the trusted
+        # query.py and backfill the real answer. No-op unless HERMES_V1_DISPATCH_FIX set.
+        if dispatch_intercept.is_enabled() and dispatch_intercept.looks_like_dispatch(final_response):
+            _fallback_q = user_message if isinstance(user_message, str) else ""
+            try:
+                _loop = asyncio.get_running_loop()
+                final_response = await _loop.run_in_executor(
+                    None,
+                    lambda fr=final_response, q=_fallback_q: dispatch_intercept.intercept_dispatch(fr, q),
+                )
+            except Exception:
+                logger.warning("dispatch intercept (non-stream) failed; keeping original", exc_info=True)
         # CK fork: normalise assistant text to zh-TW (繁體) when configured. No-op by default.
         final_response = convert_zh(final_response)
         is_partial = bool(result.get("partial"))
@@ -1439,6 +1455,9 @@ class APIServerAdapter(BasePlatformAdapter):
 
             # Stream content chunks as they arrive from the agent
             loop = asyncio.get_running_loop()
+            # CK fork: guard buffers a text-ified business dispatch and, at finish,
+            # substitutes the real query.py answer. Transparent (no-op) unless flag set.
+            guard = dispatch_intercept.StreamDispatchGuard()
             while True:
                 try:
                     delta = await loop.run_in_executor(None, lambda: stream_q.get(timeout=0.5))
@@ -1450,7 +1469,8 @@ class APIServerAdapter(BasePlatformAdapter):
                                 delta = stream_q.get_nowait()
                                 if delta is None:
                                     break
-                                last_activity = await _emit(delta)
+                                for _out in guard.feed(delta):
+                                    last_activity = await _emit(_out)
                             except _q.Empty:
                                 break
                         break
@@ -1462,7 +1482,18 @@ class APIServerAdapter(BasePlatformAdapter):
                 if delta is None:  # End of stream sentinel
                     break
 
-                last_activity = await _emit(delta)
+                for _out in guard.feed(delta):
+                    last_activity = await _emit(_out)
+
+            # CK fork: flush the dispatch guard — if a text-ified business dispatch was
+            # buffered, run the trusted query.py (offloaded) and emit the real answer.
+            try:
+                _final_items = await loop.run_in_executor(None, guard.finish)
+            except Exception:
+                logger.warning("dispatch intercept (stream) finish failed", exc_info=True)
+                _final_items = []
+            for _out in _final_items:
+                last_activity = await _emit(_out)
 
             # Get usage from completed agent
             usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}

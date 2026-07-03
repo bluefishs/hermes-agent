@@ -106,3 +106,24 @@ Get-ScheduledTask -TaskName CK-Hermes-Health-Smoke ; Unregister-ScheduledTask -T
 
 - writer 目前 script 模式無語意分析（pattern 欄位留白）。日後若 meta 主路徑換更強模型，可加一個「弱模型也安全」的小結步驟，但**勿回 agent 模式整段餵 LLM**（413 教訓）。
 - meta 重新活躍寫 `log.md` 後，daily 的「今日動作摘要」會自然填充（目前 log 停在 5/18 → daily 多為靜默日屬正常）。
+
+## /v1 工具集裁剪持久化（2026-07-03 平台效益優化）
+
+> meta profile 的 `platform_toolsets.api_server` 裁剪目前存於 runtime volume（`/opt/data/profiles/meta/config.yaml`，**跨 restart+recreate 存活**）；此處記錄以供版控追溯/重建。
+
+**內容**（移除純文字業務問答用不到的 browser/vision/image_gen，13→10 toolset；降 dispatch 干擾+prompt）：
+```yaml
+platform_toolsets:
+  api_server: [code_execution, cronjob, delegation, file, memory, session_search, skills, terminal, todo, web]
+```
+
+**重建/重套**（若 volume config 遺失或需重現）：
+```bash
+docker exec ck-hermes-gateway sh -c 'grep -q "^platform_toolsets:" /opt/data/profiles/meta/config.yaml || cat >> /opt/data/profiles/meta/config.yaml <<YAML
+
+platform_toolsets:
+  api_server: [code_execution, cronjob, delegation, file, memory, session_search, skills, terminal, todo, web]
+YAML'
+# 驗證：docker exec ck-hermes-gateway /opt/hermes/.venv/bin/python3 -c "import yaml;from hermes_cli.tools_config import _get_platform_tools;print(sorted(_get_platform_tools(yaml.safe_load(open('/opt/data/profiles/meta/config.yaml')),'api_server')))"
+```
+備份：`config.yaml.bak.20260703-pre-toolset-trim`。長期歸宿同 DA 系列＝納 CK_AaaP hermes-stack 版控。
