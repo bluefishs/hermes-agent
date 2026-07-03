@@ -129,6 +129,47 @@
 
 ---
 
+## 附三：新版 Hermes agent（0.13.0）功能盤點 + 導入優化評估
+
+覆盤後檢視 hermes-agent 0.13.0 有哪些功能/服務值得導入以提升平台效益（Explore agent 深掘，聚焦免費基礎 + 平台痛點）。
+
+**版本現況**：fork 落後上游 NousResearch **5864 commits**（分岔久遠），本地領先 69（CK 客製）。全量 re-sync 是大工程、非現在該做（走 `upstream-sync-cadence.md` 節奏）。上游新東西多為 openviking memory API / computer-use / vision 修復，非急迫。
+
+**Top 3 最高平台效益導入候選**：
+
+| # | 候選 | 潛力 | 狀態 |
+|---|---|---|---|
+| 1 | `platform_toolsets:{api_server:[...]}` 裁剪 /v1 工具集 | 高 | ✅ **本次已執行**（見下）|
+| 2 | `session_search_tool`（FTS5 跨 session 召回）| 高 | 工具**已載入** /v1，差在 meta 主動呼叫（行為/prompt 層，非 config）|
+| 3 | api_server 後處理攔截業務查詢（WS-D 落點）| 中高 | **待實作**（下一 P0）|
+
+**關鍵框架事實（0.13.0 實查）**：
+- `/v1` 每請求重建 AIAgent（`api_server.py:906`）= 延遲根因（架構性）。
+- 框架有完整 hook 事件系統（`gateway/hooks.py`，`command:*` 支援 deny/handled/rewrite），**但 `api_server.py` 對 hook emit=0**→ **/v1 天生繞過 hook**（歷史結論在 0.13.0 仍成立）。∴ 痛點①的攔截只能走 CK 已用的 zh_convert 後處理注入點（`api_server.py:1290/1435`），與 ADR-CK-005 ③ 收斂一致。
+- 30 個 provider plugin + reasoning/thinking-mode 內建（DeepSeek/xai/ollama-cloud…）、fallback chain 就緒→**換 provider 純 config**，但免費基礎下實際可行僅本地/`ollama-cloud` 換更強 tool-use 模型（reasoning 多付費）。
+- `clarify_tool` 可讓弱模型「缺數字時反問而非捏造」，但 /v1 OpenAI-compat 反問語意不自然。
+- `/v1/responses`（stateful）、`delegate`（子 agent 限縮 toolset）為架構性選項。
+
+### 已執行優化（本次）
+
+**優化 A — /v1 工具集裁剪**（候選 #1，`profiles/meta/config.yaml` 加 `platform_toolsets.api_server`）
+- 移除純文字業務問答用不到的 `browser`（10 子工具）+`vision`+`image_gen`（6/4 覆盤點名的 /v1 未用三工具）；13→10 toolset。
+- 效益：dispatch 少 12 個干擾工具→qwen 更易選對、prompt 縮小、**零能力損失**（保留 terminal/skills/memory/session_search 等 meta 核心）、可逆。
+- 持久性：改在 `/opt/data` volume（**跨 restart+recreate 存活**，優於 R1 曾經的 image-layer patch）；備份 `config.yaml.bak.20260703-pre-toolset-trim`。**版控待補**（目前為 runtime volume 態、非 git；建議納 CK_AaaP hermes-stack 持久化如 DA 工單）。
+- 實測：/v1 200、業務查詢 dispatch **意圖正確**（選對 query.py，未捏造假數字），但出現**文字化 tool_call**（見下）。
+
+**優化 B — ADR REGISTRY 重生**（修 pre-push gate 一項 RED）：`python CK_AaaP/scripts/generate-adr-registry.py`。
+
+### 🎯 下一 P0 定案：候選 #3 = 業務查詢後處理攔截（治本捏造/文字化 tool_call）
+
+本次 /v1 業務查詢實測回覆：
+```
+terminal("/opt/data/skills/ck-missive-bridge/scripts/query.py agent_query --question "...")
+```
+qwen **選對工具但寫成文字沒執行**（殘留②文字化 tool_call）。這與裁剪前「捏造 1234」同屬 dispatch 不可靠（模型保真度牆），**唯一治本 = 在 `api_server.py:1290/1435` 後處理層偵測「文字化 tool_call / 業務查詢缺數字」→ 真執行 query.py → 回填正確結果**（model-agnostic、不受 TPM、不靠模型保真度，與 WS-D 甲 / ADR-CK-005 ③ 完全一致）。需 fork 改碼 + rebuild image + 測試，屬下一實作 sprint。
+
+---
+
 ## 附一：本次探針指令備忘（跨 Git Bash 陷阱）
 - docker exec 走容器內 venv python：`export MSYS_NO_PATHCONV=1` 避免 `/opt/...` 被 Git Bash 轉成 `C:/Program Files/Git/opt/...`
 - /v1 探針需 `Authorization: Bearer $API_SERVER_KEY`、model=`meta`（缺 key 回 401）
