@@ -2,12 +2,12 @@
 
 Covers the production-safety contract:
   * disabled by default (no env → never intercepts, never executes)
-  * narrow whitelist: only text-ified ``query.py agent_query`` triggers; malicious /
-    non-whitelisted ``terminal(...)`` text is NEVER executed
+  * signal-based whitelist: the many text-ified ``query.py agent_query`` shapes the
+    model emits all trigger; malicious / non-whitelisted ``terminal(...)`` text never does
   * never executes model-supplied command text — only a trusted script via argv
   * graceful fallback to original text on any execution failure
-  * streaming guard: transparent when disabled, immediate flush for normal responses,
-    buffer-and-substitute for a text-ified dispatch
+  * streaming guard: transparent when disabled, buffer-until-threshold, substitute a
+    short text-ified dispatch, stream long real answers
 """
 import json
 from unittest.mock import MagicMock
@@ -25,12 +25,24 @@ from gateway.dispatch_intercept import (
     run_query,
 )
 
-# A realistic text-ified dispatch as emitted by qwen (observed 2026-07-03).
+# The observed text-ified dispatch shapes (2026-07-03/04).
 DISPATCH = (
     'terminal("/opt/data/skills/ck-missive-bridge/scripts/query.py '
     'agent_query --question "系統裡公文總共幾份？"")'
 )
-REAL_ANSWER = "根據查詢結果，系統裡公文總共有 1,895 筆。"
+D_KWARG = (
+    "terminal(command='python3 /opt/data/skills/ck-missive-bridge/scripts/query.py "
+    'agent_query --question "系統裡公文總共幾份?"\')'
+)
+D_BARE = (
+    "python3 /opt/data/skills/ck-missive-bridge/scripts/query.py "
+    'agent_query --question "系統裡公文總共幾份？"'
+)
+D_MARKDOWN = (
+    '讓我們查詢一下。\n```json\n{"terminal": "python3 x/query.py '
+    'agent_query --question \\"系統裡公文總共幾份？\\""}\n```'
+)
+REAL_ANSWER = "根據查詢結果，系統裡公文總共有 1,898 筆。"
 
 
 @pytest.fixture
@@ -50,17 +62,19 @@ def test_enabled_when_set(on):
     assert is_enabled() is True
 
 
-# --- looks_like_dispatch (narrow whitelist) -----------------------------------
+# --- looks_like_dispatch (signal-based, format-agnostic) ----------------------
 
-def test_looks_like_dispatch_matches_real_case():
-    assert looks_like_dispatch(DISPATCH) is True
+@pytest.mark.parametrize("text", [DISPATCH, D_KWARG, D_BARE, D_MARKDOWN])
+def test_looks_like_dispatch_matches_all_observed_shapes(text):
+    assert looks_like_dispatch(text) is True
 
 
 @pytest.mark.parametrize("text", [
-    "系統裡公文總共有 1,895 筆。",                       # normal prose answer (T3)
+    "系統裡公文總共有 1,895 筆。",                       # prose answer, no sig (T3)
     "你好，我是 Hermes 主腦。",                          # normal chat (T2)
     'terminal("rm -rf /")',                              # malicious, no query.py (T4)
     'terminal("/opt/x/other.py agent_query --question \\"x\\"")',  # non-whitelist script (T5)
+    "query.py agent_query 是一個查詢工具的名稱。",       # prose mentions it, no invoke hint
     "",
     None,
     123,
@@ -70,27 +84,35 @@ def test_looks_like_dispatch_rejects_non_dispatch(text):
 
 
 def test_looks_like_dispatch_rejects_long_prose_mentioning_it():
-    prose = "為了查詢公文，agent 會呼叫 query.py agent_query。" + ("說明。" * 200)
-    assert looks_like_dispatch(prose) is False  # too long / not a bare terminal( call
+    prose = "為了查詢公文，agent 會呼叫 query.py agent_query --question。" + ("說明。" * 200)
+    assert looks_like_dispatch(prose) is False  # too long → a real answer, not a bare call
 
 
-# --- extract_question ---------------------------------------------------------
+# --- extract_question (tolerant of quoting variants) --------------------------
 
-def test_extract_question_from_call():
+def test_extract_question_double_quotes():
     assert extract_question(DISPATCH) == "系統裡公文總共幾份？"
+
+
+def test_extract_question_single_quotes_kwarg():
+    assert extract_question(D_KWARG) == "系統裡公文總共幾份?"
+
+
+def test_extract_question_escaped_quotes_markdown():
+    assert extract_question(D_MARKDOWN) == "系統裡公文總共幾份？"
 
 
 def test_extract_question_falls_back():
     assert extract_question('terminal("...query.py agent_query")', "公文幾份") == "公文幾份"
 
 
-# --- intercept_dispatch (non-stream, T1-T7) -----------------------------------
+# --- intercept_dispatch (non-stream, T1-T7 + format variants) -----------------
 
-def test_T1_intercepts_and_backfills(on):
+@pytest.mark.parametrize("text", [DISPATCH, D_KWARG, D_BARE, D_MARKDOWN])
+def test_T1_intercepts_and_backfills_all_shapes(on, text):
     runner = MagicMock(return_value=REAL_ANSWER)
-    out = intercept_dispatch(DISPATCH, "系統裡公文總共幾份？", runner=runner)
-    assert out == REAL_ANSWER
-    runner.assert_called_once_with("系統裡公文總共幾份？")
+    assert intercept_dispatch(text, "系統裡公文總共幾份？", runner=runner) == REAL_ANSWER
+    runner.assert_called_once()
 
 
 def test_T2_normal_chat_untouched(on):
@@ -131,9 +153,8 @@ def test_T5b_shell_metachars_in_call_never_shell_injected(on):
     )
     out = intercept_dispatch(poisoned, "公文幾份", runner=runner)
     assert out == REAL_ANSWER
-    # runner received a plain question string, no shell metacharacters carried as command
     (called_q,), _ = runner.call_args
-    assert "rm -rf" not in called_q
+    assert "rm -rf" not in called_q  # no shell metacharacters carried into the command
 
 
 def test_T6_execution_failure_falls_back(on):
@@ -175,7 +196,6 @@ def test_run_query_parses_answer(monkeypatch, tmp_path):
 
     monkeypatch.setattr(di.subprocess, "run", fake_run)
     assert run_query("公文幾份") == REAL_ANSWER
-    # argv (no shell): [python, script, "agent_query", "--question", q]
     assert captured["argv"][1:] == [str(script), "agent_query", "--question", "公文幾份"]
 
 
@@ -210,7 +230,7 @@ def test_run_query_empty_question_no_exec(monkeypatch):
     called.assert_not_called()
 
 
-# --- StreamDispatchGuard ------------------------------------------------------
+# --- StreamDispatchGuard (buffer-until-threshold) -----------------------------
 
 def _drain(guard, deltas):
     out = []
@@ -225,54 +245,59 @@ def test_stream_disabled_is_transparent():
     assert _drain(g, ["hello ", "world"]) == ["hello ", "world"]
 
 
-def test_stream_normal_response_flushes_immediately():
+def test_stream_short_normal_response_preserved():
     runner = MagicMock()
     g = StreamDispatchGuard(runner=runner, enabled=True)
-    # first content delta doesn't start with terminal( → immediate passthrough
-    assert g.feed("你好，") == ["你好，"]
-    assert g.feed("我是主腦") == ["我是主腦"]
-    assert g.finish() == []
+    out = _drain(g, ["你好，", "我是主腦"])
+    assert "".join(x for x in out if isinstance(x, str)) == "你好，我是主腦"
     runner.assert_not_called()
 
 
-def test_stream_dispatch_is_substituted():
+@pytest.mark.parametrize("chunks", [
+    ['python3 x/query.py ', 'agent_query --question "系統裡公文總共幾份？"'],     # bare
+    ['terminal(command=\'python3 x/query.py agent_query ', '--question "公文幾份"\')'],  # kwarg
+    ['讓我們查詢。```json\n{"terminal": "python3 x/query.py agent_query ', '--question \\"公文幾份\\""}```'],  # md
+])
+def test_stream_dispatch_shapes_substituted(chunks):
     runner = MagicMock(return_value=REAL_ANSWER)
     g = StreamDispatchGuard(runner=runner, enabled=True)
-    # stream the text-ified call in chunks
-    chunks = ['terminal("', "/opt/data/skills/ck-missive-bridge/scripts/query.py ",
-              'agent_query --question "系統裡公文總共幾份？"")']
-    out = _drain(g, chunks)
-    assert out == [REAL_ANSWER]
+    assert _drain(g, chunks) == [REAL_ANSWER]
     runner.assert_called_once()
-    assert runner.call_args[0][0] == "系統裡公文總共幾份？"
 
 
-def test_stream_malicious_not_executed_and_flushed():
+def test_stream_long_answer_flushes_after_threshold():
     runner = MagicMock()
     g = StreamDispatchGuard(runner=runner, enabled=True)
-    # starts with terminal( but never carries query.py agent_query → give up, flush
-    chunks = ['terminal("rm -rf ', "/ --no-preserve-root", '")' + ("x" * 130)]
-    out = _drain(g, chunks)
+    big = "系統中的公文資料顯示收發文趨勢。" * 40  # > 400 chars, no dispatch sig
+    out = _drain(g, [big, "更多內容"])
+    assert "".join(out) == big + "更多內容"
     runner.assert_not_called()
-    assert "".join(out) == "".join(chunks)  # nothing dropped, nothing executed
+
+
+def test_stream_malicious_short_not_executed():
+    runner = MagicMock()
+    g = StreamDispatchGuard(runner=runner, enabled=True)
+    out = _drain(g, ['terminal("rm -rf ', '/")'])
+    runner.assert_not_called()
+    assert "".join(out) == 'terminal("rm -rf /")'
 
 
 def test_stream_tool_progress_tuple_forces_passthrough():
     runner = MagicMock()
     g = StreamDispatchGuard(runner=runner, enabled=True)
-    # real tool execution (progress tuple) mid-stream → abandon interception
     out = []
-    out.extend(g.feed('terminal("'))                       # buffered (possible prefix)
-    out.extend(g.feed(("__tool_progress__", {"x": 1})))    # flush + passthrough
+    out.extend(g.feed("some "))
+    out.extend(g.feed(("__tool_progress__", {"x": 1})))
     out.extend(g.feed("done"))
     out.extend(g.finish())
     assert ("__tool_progress__", {"x": 1}) in out
+    assert "some " in out and "done" in out
     runner.assert_not_called()
 
 
 def test_stream_execution_failure_emits_buffered():
     runner = MagicMock(return_value=None)  # exec failed
     g = StreamDispatchGuard(runner=runner, enabled=True)
-    chunks = ['terminal("', "...query.py agent_query --question ", '"公文幾份"")']
+    chunks = ['python3 query.py agent_query ', '--question "公文幾份"']
     out = _drain(g, chunks)
     assert "".join(out) == "".join(chunks)  # fail-safe: original text preserved

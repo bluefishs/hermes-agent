@@ -1,37 +1,41 @@
 """Optional business-query dispatch interception for /v1 (CK fork).
 
 The weak local model (qwen2.5:7b) intermittently mis-fires a business-data query on
-the ``meta`` profile: instead of *executing* the ``ck-missive-bridge`` skill it either
-fabricates a number, or emits the tool call as **literal text**, e.g.::
+the ``meta`` profile: instead of *executing* the ``ck-missive-bridge`` skill it emits
+the tool call as **literal text**. Observed variants (2026-07-03/04) are diverse::
 
     terminal("/opt/data/skills/ck-missive-bridge/scripts/query.py agent_query --question "公文幾份"")
+    terminal(command='python3 .../query.py agent_query --question "公文幾份"')
+    python3 .../query.py agent_query --question "公文幾份"
+    讓我們查詢一下。```json\n{"terminal": "python3 .../query.py agent_query --question \\"公文幾份\\""}```
 
 Prompt-level and tool-form fixes were empirically exhausted (ADR-CK-005 ①②③): the
 bottleneck is the model's structured-tool-call fidelity (runtime layer), not the tool
 form, and the free-tier constraint rules out swapping to a stronger model. So this
 module applies a **model-agnostic** safety net on the gateway response path — the same
-injection point as :mod:`gateway.zh_convert` — detecting that one whitelisted pattern
-and substituting the *real* answer by directly invoking the trusted ``query.py
-agent_query`` script (the path that empirically returns ground truth 100%).
+injection point as :mod:`gateway.zh_convert` — detecting any of those text-ified
+``query.py agent_query`` calls and substituting the *real* answer by directly invoking
+the trusted script (the path that empirically returns ground truth 100%).
 
 See docs/plans/ws-d-v1-postprocess-dispatch-design.md and ADR-CK-005 ③.
 
 SECURITY — narrow whitelist by design (never a general text executor):
-- ONLY the ``query.py agent_query`` signature triggers interception.
+- The detected signal is ``query.py agent_query``; we ONLY ever run that trusted script.
 - The command string emitted by the model is **never executed**. We extract only the
   ``--question`` value (or fall back to the user's actual question) and run a
   *config/hardcoded* trusted script path with an argv list (no shell), so a text like
-  ``terminal("rm -rf /")`` can never be run.
+  ``terminal("rm -rf /")`` can never be run — it lacks the query.py signature.
 - Any non-match, any error, or the feature being disabled → original text returned
   unchanged (fail-safe).
 
-Opt-in: disabled unless ``HERMES_V1_DISPATCH_FIX`` is truthy (recommended value
-``agent_query``). Empty/unset → no-op. This mirrors ``HERMES_ZH_CONVERT`` so the code is
-safe to ship in the image *before* it is switched on per-deployment.
+Opt-in: disabled unless ``HERMES_V1_DISPATCH_FIX`` is truthy (recommended ``agent_query``).
+Empty/unset → no-op. Mirrors ``HERMES_ZH_CONVERT`` so it is safe to ship in the image
+before it is switched on per-deployment.
 """
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -47,21 +51,22 @@ __all__ = [
     "StreamDispatchGuard",
 ]
 
+logger = logging.getLogger(__name__)
+
 ENV_VAR = "HERMES_V1_DISPATCH_FIX"
 SCRIPT_ENV = "HERMES_V1_DISPATCH_QUERY_SCRIPT"
 _DEFAULT_SCRIPT = "skills/ck-missive-bridge/scripts/query.py"  # relative to HERMES_HOME
 
-# Signature of the whitelisted business-query dispatch. We ONLY ever act on this.
+# The whitelisted business-query signature. We ONLY ever act on / execute this.
 _SIG = re.compile(r"query\.py\s+agent_query", re.IGNORECASE)
-# The tool-call wrapper the model text-ifies; bounds false positives on prose answers.
-# Tolerant of leading markdown/quote noise (``` `terminal(` ``, ``**terminal**`` …).
-_PREFIX = re.compile(r"^[\s`*\"'>]*<?\s*terminal[\s(>]", re.IGNORECASE)
-_QUESTION = re.compile(r"--question\s+([\"'])(?P<q>.+?)\1", re.DOTALL)
+# An invocation hint distinguishes a text-ified *call* from prose that merely mentions
+# the script (e.g. "how does query.py agent_query work?").
+_INVOKE_HINT = re.compile(r"--question|terminal", re.IGNORECASE)
+# Question extraction: tolerant of "..", '..', =, and JSON-escaped \" quoting.
+_QUESTION = re.compile(r"--question[=\s]+[\"'\\]*(?P<q>[^\"'\\\n]+)")
 
-_MAX_DISPATCH_LEN = 400   # a real answer is longer / not a bare tool call
+_MAX_DISPATCH_LEN = 400   # a real prose answer is longer / not a bare tool call
 _MAX_QUESTION_LEN = 500
-_STREAM_PREFIX_TOKEN = "terminal"
-_STREAM_GIVEUP_LEN = 120  # streaming: past this without the query.py sig → not our case
 
 
 def is_enabled(flag: str | None = None) -> bool:
@@ -74,9 +79,11 @@ def is_enabled(flag: str | None = None) -> bool:
 def looks_like_dispatch(text) -> bool:
     """True iff ``text`` is a (short) text-ified ``query.py agent_query`` tool call.
 
-    Narrow on purpose: must carry the query.py agent_query signature, be short enough
-    to be a bare tool call (not a prose answer that merely mentions it), and begin with
-    the ``terminal(`` wrapper the model emits.
+    Signal-based (format-agnostic): must carry the ``query.py agent_query`` signature
+    plus an invocation hint (``--question`` / ``terminal``), and be short enough to be
+    a bare tool call rather than a prose answer. This deliberately matches the many
+    shapes the model emits (``terminal("…")``, ``terminal(command='…')``, bare
+    ``python3 …``, markdown ```json {"terminal": "…"}```).
     """
     if not isinstance(text, str):
         return False
@@ -85,7 +92,7 @@ def looks_like_dispatch(text) -> bool:
         return False
     if not _SIG.search(s):
         return False
-    return bool(_PREFIX.match(s))
+    return bool(_INVOKE_HINT.search(s))
 
 
 def extract_question(text, fallback: str = "") -> str:
@@ -93,7 +100,9 @@ def extract_question(text, fallback: str = "") -> str:
     if isinstance(text, str):
         m = _QUESTION.search(text)
         if m:
-            return m.group("q").strip()[:_MAX_QUESTION_LEN]
+            q = m.group("q").strip().rstrip("\\").strip()
+            if q:
+                return q[:_MAX_QUESTION_LEN]
     return (fallback or "").strip()[:_MAX_QUESTION_LEN]
 
 
@@ -156,36 +165,27 @@ def intercept_dispatch(text, user_question: str = "", *, runner=run_query) -> st
     try:
         answer = runner(question)
     except Exception:
+        logger.warning("dispatch-intercept: query.py raised; keeping original", exc_info=True)
         return text
-    return answer if answer else text
-
-
-def _still_possible_prefix(acc: str) -> bool:
-    """Streaming: could the accumulated (dispatch-signature-free) text still be a
-    text-ified ``terminal(...)`` dispatch? Used to decide whether to keep buffering."""
-    t = acc.lstrip(" \t\n`*\"'>").lower()
-    if not t:
-        return True  # only noise/whitespace so far — keep waiting
-    tok = _STREAM_PREFIX_TOKEN
-    if len(t) <= len(tok):
-        return tok.startswith(t)
-    if not t.startswith(tok):
-        return False
-    # starts with "terminal…": keep buffering only while short (the sig check in
-    # feed() catches real dispatches well before this bound).
-    return len(acc) <= _STREAM_GIVEUP_LEN
+    if answer:
+        logger.info("dispatch-intercept: backfilled business query (q=%r)", question[:80])
+        return answer
+    return text
 
 
 class StreamDispatchGuard:
-    """Buffer-until-decided guard for the SSE streaming path.
+    """Buffer-until-threshold guard for the SSE streaming path.
 
-    Normal responses almost never start with ``terminal(``, so the first content delta
-    fails the prefix test and is flushed immediately (near-zero added latency). Only
-    when the accumulated text could be a text-ified dispatch do we withhold deltas; at
-    :meth:`finish` we run the real query and emit the true answer instead.
+    A text-ified dispatch is always short and *is* the whole response, whereas a real
+    answer is longer prose. So we buffer until the accumulated text exceeds
+    ``_MAX_DISPATCH_LEN`` (→ it's a real answer: flush + stream the rest) or the stream
+    ends (→ short response: at :meth:`finish`, if it's a text-ified dispatch, run the
+    real query and emit the true answer instead). This catches every text-ified shape
+    regardless of how the response begins, at the cost of buffering only the first
+    ``_MAX_DISPATCH_LEN`` chars of longer answers.
 
-    Transparent when disabled: :meth:`feed` echoes the delta, :meth:`finish` yields
-    nothing — identical to the un-guarded stream.
+    Transparent when disabled: :meth:`feed` echoes each item, :meth:`finish` yields the
+    (empty) buffer — identical to the un-guarded stream.
     """
 
     def __init__(self, user_question: str = "", *, runner=run_query, enabled: bool | None = None):
@@ -193,58 +193,47 @@ class StreamDispatchGuard:
         self._runner = runner
         self._buf: list = []
         self._acc = ""
-        self._mode = "undecided"  # undecided | intercept | passthrough
+        self._mode = "buffering"  # buffering | passthrough
         self._enabled = is_enabled() if enabled is None else enabled
 
     def feed(self, delta) -> list:
         """Consume one incoming queue item; return the list of items to emit now."""
         if not self._enabled or self._mode == "passthrough":
             return [delta]
-        if self._mode == "intercept":
-            if isinstance(delta, str):
-                self._buf.append(delta)
-                return []
+        if not isinstance(delta, str):
             # A non-content item (tool-progress tuple) means real execution is
             # happening → abandon interception, flush buffered content + this item.
             out = self._buf + [delta]
             self._buf = []
             self._mode = "passthrough"
             return out
-        # undecided
-        if not isinstance(delta, str):
-            out = self._buf + [delta]
+        self._buf.append(delta)
+        self._acc += delta
+        if len(self._acc) > _MAX_DISPATCH_LEN:
+            # Too long to be a bare tool call → a real answer; stop buffering.
+            out = self._buf
             self._buf = []
             self._mode = "passthrough"
             return out
-        self._buf.append(delta)
-        self._acc += delta
-        if _SIG.search(self._acc):
-            self._mode = "intercept"
-            return []
-        if _still_possible_prefix(self._acc):
-            return []  # keep buffering — might become a dispatch
-        out = self._buf
-        self._buf = []
-        self._mode = "passthrough"
-        return out
+        return []  # keep buffering — might be a short text-ified dispatch
 
     def finish(self) -> list:
         """Called after the stream ends; return the final items to emit.
 
-        Runs the trusted query (blocking) only in interception mode; callers on an
-        event loop should offload this via ``run_in_executor``.
+        Runs the trusted query (blocking) only when a short buffered response is a
+        text-ified dispatch; callers on an event loop should offload via
+        ``run_in_executor``.
         """
-        if self._mode == "intercept" or (
-            self._mode == "undecided" and looks_like_dispatch(self._acc)
-        ):
+        if self._mode != "passthrough" and looks_like_dispatch(self._acc):
             question = extract_question(self._acc, self._q)
             try:
                 answer = self._runner(question)
             except Exception:
+                logger.warning("dispatch-intercept(stream): query.py raised", exc_info=True)
                 answer = None
             if answer:
+                logger.info("dispatch-intercept(stream): backfilled (q=%r)", question[:80])
                 return [answer]
-            return self._buf  # execution failed → emit what we buffered (fail-safe)
         out = self._buf
         self._buf = []
         return out
