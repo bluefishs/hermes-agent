@@ -338,3 +338,48 @@ def test_stream_execution_failure_emits_buffered():
     chunks = ['python3 query.py agent_query ', '--question "公文幾份"']
     out = _drain(g, chunks)
     assert "".join(out) == "".join(chunks)  # fail-safe: original text preserved
+
+
+# --- business-count fastpath (WS-D 甲 Layer-2, request side) --------------------
+
+from gateway.dispatch_intercept import (  # noqa: E402
+    FASTPATH_ENV,
+    is_fastpath_enabled,
+    matches_business_query,
+)
+
+
+def test_fastpath_disabled_by_default(monkeypatch):
+    monkeypatch.delenv(FASTPATH_ENV, raising=False)
+    assert is_fastpath_enabled() is False
+
+
+def test_fastpath_enabled_when_set(monkeypatch):
+    monkeypatch.setenv(FASTPATH_ENV, "count")
+    assert is_fastpath_enabled() is True
+
+
+@pytest.mark.parametrize("q", [
+    "系統裡公文總共幾份？",
+    "現在系統裡公文總共有幾份?",
+    "公文有多少筆",
+    "收文跟發文各有幾件？",
+    "公文總數是多少",
+    "發文數量統計",
+])
+def test_fastpath_matches_count_questions(q):
+    assert matches_business_query(q) is True
+
+
+@pytest.mark.parametrize("q", [
+    "你好，介紹一下你自己",                       # 一般對話
+    "我們上週討論了什麼專案？",                   # 記憶類
+    "公文管理有什麼建議？",                       # 有實體無計數意圖
+    "多少錢可以升級 GPU？",                       # 有計數詞無業務實體
+    "幫我摘要這份公文的重點內容並且提出後續處理的具體建議，另外整理相關的歷史往來與承辦單位聯絡窗口清單",  # 過長非短問句
+    "",
+    None,
+    123,
+])
+def test_fastpath_rejects_non_count_questions(q):
+    assert matches_business_query(q) is False

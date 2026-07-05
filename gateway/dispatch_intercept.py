@@ -42,7 +42,10 @@ import urllib.request
 
 __all__ = [
     "ENV_VAR",
+    "FASTPATH_ENV",
     "is_enabled",
+    "is_fastpath_enabled",
+    "matches_business_query",
     "looks_like_dispatch",
     "extract_question",
     "run_query",
@@ -53,6 +56,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "HERMES_V1_DISPATCH_FIX"
+FASTPATH_ENV = "HERMES_V1_BUSINESS_FASTPATH"
 BASE_URL_ENV = "MISSIVE_BASE_URL"
 TOKEN_ENV = "MISSIVE_API_TOKEN"
 _DEFAULT_BASE = "https://missive.cksurvey.tw"  # must be HTTPS (hermes blocks plain HTTP egress)
@@ -79,6 +83,40 @@ def is_enabled(flag: str | None = None) -> bool:
     if flag is None:
         flag = os.environ.get(ENV_VAR, "")
     return bool((flag or "").strip())
+
+
+# ── WS-D 甲 Layer-2: request-side business-count fastpath ─────────────────────
+# A *narrow* classifier for document-count/statistics questions. Matching questions
+# are answered by the trusted Missive agent_query directly, BEFORE the meta agent
+# loop runs — treating fabrication mode A (plausible-wrong numbers the response-side
+# net cannot safely detect) and mode B alike, and cutting latency (~18s vs 40-200s).
+# Both conditions are required so ordinary meta chat never matches; on any doubt the
+# request falls through to the normal agent path (fail-safe).
+_BIZ_ENTITY = re.compile(r"公文|收文|發文")
+_BIZ_COUNT = re.compile(r"幾份|幾筆|幾件|多少|總數|總共|數量|統計")
+_MAX_FASTPATH_QUESTION_LEN = 80  # short factual question, not a nuanced request
+
+
+def is_fastpath_enabled(flag: str | None = None) -> bool:
+    """True iff the business-count fastpath flag is set to a non-blank value."""
+    if flag is None:
+        flag = os.environ.get(FASTPATH_ENV, "")
+    return bool((flag or "").strip())
+
+
+def matches_business_query(text) -> bool:
+    """True iff ``text`` is a short business document-count/statistics question.
+
+    Requires BOTH a business entity keyword (公文/收文/發文) and a counting/statistics
+    intent (幾份/多少/總數/…), and a short length — deliberately narrow so normal meta
+    conversation never short-circuits.
+    """
+    if not isinstance(text, str):
+        return False
+    s = text.strip()
+    if not s or len(s) > _MAX_FASTPATH_QUESTION_LEN:
+        return False
+    return bool(_BIZ_ENTITY.search(s) and _BIZ_COUNT.search(s))
 
 
 def looks_like_dispatch(text) -> bool:

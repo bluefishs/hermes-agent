@@ -1165,6 +1165,72 @@ class APIServerAdapter(BasePlatformAdapter):
         model_name = body.get("model", self._model_name)
         created = int(time.time())
 
+        # CK fork (WS-D 甲 Layer-2): request-side business-count fastpath — a narrow
+        # class of document-count questions is answered by the trusted Missive
+        # agent_query directly, bypassing the weak-model agent loop entirely (treats
+        # fabrication + textified dispatch + latency at once). Fail-safe: on any
+        # failure the request falls through to the normal agent path below.
+        # No-op unless HERMES_V1_BUSINESS_FASTPATH is set.
+        if (
+            dispatch_intercept.is_fastpath_enabled()
+            and isinstance(user_message, str)
+            and dispatch_intercept.matches_business_query(user_message)
+        ):
+            try:
+                _fp_loop = asyncio.get_running_loop()
+                _fp_answer = await _fp_loop.run_in_executor(
+                    None, dispatch_intercept.run_query, user_message
+                )
+            except Exception:
+                logger.warning("business fastpath failed; falling through to agent", exc_info=True)
+                _fp_answer = None
+            if _fp_answer:
+                logger.warning("dispatch-intercept: business fastpath served (q=%r)", user_message[:80])
+                _fp_answer = convert_zh(_fp_answer)
+                _fp_headers = {"X-Hermes-Fastpath": "business-count"}
+                if gateway_session_key:
+                    _fp_headers["X-Hermes-Session-Key"] = gateway_session_key
+                if not stream:
+                    return web.json_response(
+                        {
+                            "id": completion_id,
+                            "object": "chat.completion",
+                            "created": created,
+                            "model": model_name,
+                            "choices": [{
+                                "index": 0,
+                                "message": {"role": "assistant", "content": _fp_answer},
+                                "finish_reason": "stop",
+                            }],
+                            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                        },
+                        headers=_fp_headers,
+                    )
+                # Streaming client: emit the answer as a minimal SSE stream.
+                _fp_sse_headers = {
+                    "Content-Type": "text/event-stream",
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                    **_fp_headers,
+                }
+                _fp_origin = request.headers.get("Origin", "")
+                _fp_cors = self._cors_headers_for_origin(_fp_origin) if _fp_origin else None
+                if _fp_cors:
+                    _fp_sse_headers.update(_fp_cors)
+                _fp_resp = web.StreamResponse(status=200, headers=_fp_sse_headers)
+                await _fp_resp.prepare(request)
+                for _fp_chunk in (
+                    {"choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]},
+                    {"choices": [{"index": 0, "delta": {"content": _fp_answer}, "finish_reason": None}]},
+                    {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                     "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}},
+                ):
+                    _fp_chunk.update({"id": completion_id, "object": "chat.completion.chunk",
+                                      "created": created, "model": model_name})
+                    await _fp_resp.write(f"data: {json.dumps(_fp_chunk)}\n\n".encode())
+                await _fp_resp.write(b"data: [DONE]\n\n")
+                return _fp_resp
+
         if stream:
             import queue as _q
             _stream_q: _q.Queue = _q.Queue()
