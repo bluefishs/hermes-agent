@@ -141,7 +141,7 @@
 |---|---|---|---|
 | 1 | `platform_toolsets:{api_server:[...]}` 裁剪 /v1 工具集 | 高 | ✅ **本次已執行**（見下）|
 | 2 | `session_search_tool`（FTS5 跨 session 召回）| 高 | 工具**已載入** /v1，差在 meta 主動呼叫（行為/prompt 層，非 config）|
-| 3 | api_server 後處理攔截業務查詢（WS-D 落點）| 中高 | **待實作**（下一 P0）|
+| 3 | api_server 後處理攔截業務查詢（WS-D 落點）| 中高 | ✅ **已實作上線**（v2026.7.3.1，見附四）|
 
 **關鍵框架事實（0.13.0 實查）**：
 - `/v1` 每請求重建 AIAgent（`api_server.py:906`）= 延遲根因（架構性）。
@@ -166,7 +166,11 @@
 ```
 terminal("/opt/data/skills/ck-missive-bridge/scripts/query.py agent_query --question "...")
 ```
-qwen **選對工具但寫成文字沒執行**（殘留②文字化 tool_call）。這與裁剪前「捏造 1234」同屬 dispatch 不可靠（模型保真度牆），**唯一治本 = 在 `api_server.py:1290/1435` 後處理層偵測「文字化 tool_call / 業務查詢缺數字」→ 真執行 query.py → 回填正確結果**（model-agnostic、不受 TPM、不靠模型保真度，與 WS-D 甲 / ADR-CK-005 ③ 完全一致）。需 fork 改碼 + rebuild image + 測試，屬下一實作 sprint。
+qwen **選對工具但寫成文字沒執行**（殘留②文字化 tool_call）。這與裁剪前「捏造 1234」同屬 dispatch 不可靠（模型保真度牆），**唯一治本 = 在 `api_server.py` 後處理層偵測文字化 tool_call → 真執行 query.py → 回填正確結果**（model-agnostic、不受 TPM、不靠模型保真度，與 WS-D 甲 / ADR-CK-005 ③ 一致）。
+
+## 附四：候選 #3 已實作上線（v2026.7.3.1，治文字化 tool_call）✅
+
+依 GO 完成 TDD 實作並上線。`gateway/dispatch_intercept.py`（信號式偵測 + HTTP-direct run_query + 串流 guard）接入 api_server `:1290`（非串流）+ 串流 emit/finish；feature flag `HERMES_V1_DISPATCH_FIX=agent_query`（compose 預設 on、空值即時回滾）。**實證攔截生效**：3/3 live 業務查詢回真答案「1898 筆（收文1318+發文580）」零文字化 call，gateway log 見 `backfilled business query`（攔截確證）。47 TDD 測試 + health-smoke 8+1 綠。**兩個實戰教訓**（詳見 `ws-d-v1-postprocess-dispatch-design.md` §9）：①偵測須信號式（弱模型文字化格式多樣，`terminal(`前綴只中一種）②run_query 須 in-process HTTPS（subprocess 在 gateway sandbox 回 None，fresh exec 卻正常＝隔離單元正常≠嵌入正常）。**界限**：只治失敗模式 B（文字化 call），純捏造數字（模式 A）不在範圍。
 
 ---
 

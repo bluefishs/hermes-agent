@@ -82,3 +82,28 @@ def intercept_business_dispatch(response_text, original_question) -> str:
 - **治本捏造/文字化 tool_call**：dispatch 保真度不再是使用者可見缺陷（後端真值回填）。
 - model-agnostic、零額外成本、不受 TPM。
 - 殘留（非本案）：延遲（每請求重建 AIAgent，架構性）、跨 session 記憶（模型強度 D-δ）。
+
+---
+
+## 9. 實作結果（2026-07-04/05 已完成上線，v2026.7.3.1）✅
+
+**已實作並實測攔截生效**。TDD 47 測試綠、health-smoke 8+1 綠。但實作過程有兩個實戰逼出的關鍵修正（healthcheck≠functional / 單測≠實戰的又一課）：
+
+### 修正一：偵測從 `_PREFIX` 改「信號式」
+設計原以 `terminal(` 開頭偵測，實測發現弱模型文字化 call **格式多樣**（`terminal("..")`／`terminal(command='..')`／bare `python3 ..`／markdown ` ```json{"terminal":".."}``` `），只中一種。改**信號式**：含 `query.py agent_query` 特徵 + `--question`/`terminal` 提示 + 短長度（format-agnostic），extract_question 容忍跳脫/單雙引號/`=`。串流 guard 改**門檻緩衝**（短回覆全 buffer 到 finish 判、超 400 字視真答案放行）→ 捕捉所有格式不論起始。
+
+### 修正二：run_query 從 subprocess 改 **in-process HTTPS**（最關鍵）
+原設計用 `subprocess` 生 `query.py` 子進程。**儀器化 log 定位**：偵測正確（`looks_like=True`）但 `changed=False` → run_query **在 gateway 進程內回 None**（subprocess 版在 gateway sandbox 環境不可靠；同碼在 fresh `docker exec` 則正常——正是「隔離單元正常≠嵌入 gateway 正常」）。改**直接 urllib `POST {MISSIVE_BASE_URL}/api/ai/agent/query`**（`X-Service-Token`、內網→HTTPS rewrite、複製 query.py HTTP 邏輯），徹底避開 subprocess。→ 攔截生效。
+
+### 實證（airtight）
+- 3/3 live 業務查詢回真答案「1898 筆（收文1318+發文580）」、零文字化 call、零捏造。
+- gateway log 見決定性證據：`WARNING dispatch-intercept: backfilled business query (q='...')` = 攔截確實觸發（模型文字化→回填真值）。backfill log 提為 **WARNING 級**供生產可觀測。
+- security 白名單實測（T4/T5/T5b）：惡意 `terminal("rm..")`／非 query.py 腳本／shell metachar **絕不執行**。
+
+### 上線狀態
+- image `v2026.7.3.1`（git `fcd09bed9`+log tweak）、compose `HERMES_V1_DISPATCH_FIX=agent_query`（預設 on、空值即時回滾 no-op）。
+- 檔案：`gateway/dispatch_intercept.py` + `tests/test_dispatch_intercept.py`（47 測試）+ api_server `:1290`（非串流）/`:1457-1481`（串流 guard）接入。
+
+### 已知界限（誠實記）
+- 只治**失敗模式 B（文字化 tool_call）**。**失敗模式 A（純捏造數字**如「1234」無 query.py 特徵）不在攔截範圍（後處理法對 plausible-wrong 的本質限制）→ 留待 caller 側 WS-D 甲分類或未來強化。
+- 攔截觸發時多付一次 query.py HTTP（~18s）；閒置業務查詢可接受。
