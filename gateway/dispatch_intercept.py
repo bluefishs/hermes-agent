@@ -178,7 +178,7 @@ def intercept_dispatch(text, user_question: str = "", *, runner=run_query) -> st
         logger.warning("dispatch-intercept: query.py raised; keeping original", exc_info=True)
         return text
     if answer:
-        logger.info("dispatch-intercept: backfilled business query (q=%r)", question[:80])
+        logger.warning("dispatch-intercept: backfilled business query (q=%r)", question[:80])
         return answer
     return text
 
@@ -242,7 +242,7 @@ class StreamDispatchGuard:
                 logger.warning("dispatch-intercept(stream): query.py raised", exc_info=True)
                 answer = None
             if answer:
-                logger.info("dispatch-intercept(stream): backfilled (q=%r)", question[:80])
+                logger.warning("dispatch-intercept(stream): backfilled (q=%r)", question[:80])
                 return [answer]
         out = self._buf
         self._buf = []
