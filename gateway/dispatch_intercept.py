@@ -38,8 +38,7 @@ import json
 import logging
 import os
 import re
-import subprocess
-import sys
+import urllib.request
 
 __all__ = [
     "ENV_VAR",
@@ -54,8 +53,14 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "HERMES_V1_DISPATCH_FIX"
-SCRIPT_ENV = "HERMES_V1_DISPATCH_QUERY_SCRIPT"
-_DEFAULT_SCRIPT = "skills/ck-missive-bridge/scripts/query.py"  # relative to HERMES_HOME
+BASE_URL_ENV = "MISSIVE_BASE_URL"
+TOKEN_ENV = "MISSIVE_API_TOKEN"
+_DEFAULT_BASE = "https://missive.cksurvey.tw"  # must be HTTPS (hermes blocks plain HTTP egress)
+_AGENT_QUERY_PATH = "/api/ai/agent/query"
+# Internal plain-HTTP compose env → public HTTPS (mirrors ck-missive-bridge query.py).
+_INTERNAL_TO_HTTPS = {
+    "http://host.docker.internal:8001": "https://missive.cksurvey.tw",
+}
 
 # The whitelisted business-query signature. We ONLY ever act on / execute this.
 _SIG = re.compile(r"query\.py\s+agent_query", re.IGNORECASE)
@@ -106,48 +111,53 @@ def extract_question(text, fallback: str = "") -> str:
     return (fallback or "").strip()[:_MAX_QUESTION_LEN]
 
 
-def _script_path() -> str:
-    override = os.environ.get(SCRIPT_ENV, "").strip()
-    if override:
-        return override
-    home = os.environ.get("HERMES_HOME", "/opt/data")
-    return os.path.join(home, _DEFAULT_SCRIPT)
+def _missive_base() -> str:
+    base = os.environ.get(BASE_URL_ENV, _DEFAULT_BASE).rstrip("/")
+    return _INTERNAL_TO_HTTPS.get(base, base)
 
 
 def run_query(question: str, timeout: int = 90) -> str | None:
-    """Execute the trusted ``query.py agent_query`` with ``question``; return answer|None.
+    """Run the trusted Missive ``agent_query`` for ``question`` in-process; answer|None.
 
-    Never uses any model-provided path/command — only the config/hardcoded trusted
-    script and an argv list (no shell). Returns ``None`` on any failure so the caller
-    falls back to the original text.
+    Calls the same backend endpoint as the ``ck-missive-bridge`` ``query.py agent_query``
+    (``POST {MISSIVE_BASE_URL}/api/ai/agent/query`` with ``X-Service-Token``) directly via
+    urllib — NOT via subprocess, which is unreliable from inside the sandboxed gateway
+    process. Only the extracted ``question`` is sent; no model-supplied path/command is
+    ever used. Returns ``None`` on any failure so the caller falls back to the original
+    text. Requires an HTTPS base (plain HTTP egress is blocked); internal compose URLs are
+    auto-upgraded via ``_INTERNAL_TO_HTTPS``.
     """
     q = (question or "").strip()
     if not q:
         return None
-    script = _script_path()
-    if not os.path.isfile(script):
+    base = _missive_base()
+    if not base.startswith("https://"):
         return None
+    token = os.environ.get(TOKEN_ENV, "").strip()
+    if not token:
+        return None
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": os.environ.get("HERMES_HELPER_UA", "ck-skill-helper/1.0 (hermes-agent runtime)"),
+        "X-Service-Token": token,
+    }
+    cf_id = os.environ.get("CF_ACCESS_CLIENT_ID")
+    cf_secret = os.environ.get("CF_ACCESS_CLIENT_SECRET")
+    if cf_id and cf_secret:
+        headers["CF-Access-Client-Id"] = cf_id
+        headers["CF-Access-Client-Secret"] = cf_secret
+    body = json.dumps({"question": q[:_MAX_QUESTION_LEN]}).encode("utf-8")
+    req = urllib.request.Request(base + _AGENT_QUERY_PATH, data=body, method="POST", headers=headers)
     try:
-        proc = subprocess.run(
-            [sys.executable, script, "agent_query", "--question", q],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
     except Exception:
+        logger.warning("dispatch-intercept: agent_query HTTP call failed", exc_info=True)
         return None
-    if proc.returncode != 0 or not proc.stdout:
+    if not isinstance(data, dict) or not data.get("success"):
         return None
-    try:
-        data = json.loads(proc.stdout)
-    except Exception:
-        return None
-    if not isinstance(data, dict) or not data.get("ok"):
-        return None
-    inner = data.get("data") or {}
-    if not isinstance(inner, dict) or not inner.get("success"):
-        return None
-    answer = inner.get("answer")
+    answer = data.get("answer")
     if isinstance(answer, str) and answer.strip():
         return answer
     return None

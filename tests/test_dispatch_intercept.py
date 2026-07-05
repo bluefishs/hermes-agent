@@ -10,6 +10,7 @@ Covers the production-safety contract:
     short text-ified dispatch, stream long real answers
 """
 import json
+import urllib.error
 from unittest.mock import MagicMock
 
 import pytest
@@ -174,58 +175,94 @@ def test_T7_flag_off_noop(monkeypatch):
     runner.assert_not_called()
 
 
-# --- run_query (subprocess parsing, argv safety) ------------------------------
+# --- run_query (in-process HTTPS to Missive) ----------------------------------
 
-def _fake_proc(stdout="", returncode=0):
-    m = MagicMock()
-    m.stdout = stdout
-    m.returncode = returncode
-    return m
+class _FakeResp:
+    def __init__(self, payload):
+        self._data = json.dumps(payload).encode("utf-8")
+
+    def read(self):
+        return self._data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
 
 
-def test_run_query_parses_answer(monkeypatch, tmp_path):
-    script = tmp_path / "query.py"
-    script.write_text("# stub")
-    monkeypatch.setenv(di.SCRIPT_ENV, str(script))
-    payload = {"ok": True, "data": {"success": True, "answer": REAL_ANSWER}}
+@pytest.fixture
+def missive_env(monkeypatch):
+    monkeypatch.setenv("MISSIVE_BASE_URL", "https://missive.example.tw")
+    monkeypatch.setenv("MISSIVE_API_TOKEN", "tok123")
+
+
+def test_run_query_posts_and_parses_answer(monkeypatch, missive_env):
     captured = {}
 
-    def fake_run(argv, **kw):
-        captured["argv"] = argv
-        return _fake_proc(json.dumps(payload))
+    def fake_urlopen(req, timeout=None):
+        captured["url"] = req.full_url
+        captured["method"] = req.get_method()
+        captured["body"] = json.loads(req.data)
+        captured["token"] = req.get_header("X-service-token")
+        return _FakeResp({"success": True, "answer": REAL_ANSWER})
 
-    monkeypatch.setattr(di.subprocess, "run", fake_run)
+    monkeypatch.setattr(di.urllib.request, "urlopen", fake_urlopen)
     assert run_query("公文幾份") == REAL_ANSWER
-    assert captured["argv"][1:] == [str(script), "agent_query", "--question", "公文幾份"]
+    assert captured["url"] == "https://missive.example.tw/api/ai/agent/query"
+    assert captured["method"] == "POST"
+    assert captured["body"] == {"question": "公文幾份"}
+    assert captured["token"] == "tok123"
 
 
-def test_run_query_none_on_unsuccessful_backend(monkeypatch, tmp_path):
-    script = tmp_path / "query.py"
-    script.write_text("# stub")
-    monkeypatch.setenv(di.SCRIPT_ENV, str(script))
-    monkeypatch.setattr(
-        di.subprocess, "run",
-        lambda *a, **k: _fake_proc(json.dumps({"ok": True, "data": {"success": False}})),
-    )
-    assert run_query("x") is None
+def test_run_query_rewrites_internal_http_to_https(monkeypatch):
+    monkeypatch.setenv("MISSIVE_BASE_URL", "http://host.docker.internal:8001")
+    monkeypatch.setenv("MISSIVE_API_TOKEN", "tok")
+    captured = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["url"] = req.full_url
+        return _FakeResp({"success": True, "answer": "ok"})
+
+    monkeypatch.setattr(di.urllib.request, "urlopen", fake_urlopen)
+    assert run_query("x") == "ok"
+    assert captured["url"].startswith("https://missive.cksurvey.tw")
 
 
-def test_run_query_none_on_bad_json(monkeypatch, tmp_path):
-    script = tmp_path / "query.py"
-    script.write_text("# stub")
-    monkeypatch.setenv(di.SCRIPT_ENV, str(script))
-    monkeypatch.setattr(di.subprocess, "run", lambda *a, **k: _fake_proc("not json"))
-    assert run_query("x") is None
-
-
-def test_run_query_none_when_script_missing(monkeypatch, tmp_path):
-    monkeypatch.setenv(di.SCRIPT_ENV, str(tmp_path / "nope.py"))
-    assert run_query("x") is None
-
-
-def test_run_query_empty_question_no_exec(monkeypatch):
+def test_run_query_none_on_plain_http_base(monkeypatch):
+    monkeypatch.setenv("MISSIVE_BASE_URL", "http://internal-only:9999")  # not mapped, not https
+    monkeypatch.setenv("MISSIVE_API_TOKEN", "tok")
     called = MagicMock()
-    monkeypatch.setattr(di.subprocess, "run", called)
+    monkeypatch.setattr(di.urllib.request, "urlopen", called)
+    assert run_query("x") is None
+    called.assert_not_called()  # never attempts plain-HTTP egress
+
+
+def test_run_query_none_on_unsuccessful_backend(monkeypatch, missive_env):
+    monkeypatch.setattr(di.urllib.request, "urlopen",
+                        lambda req, timeout=None: _FakeResp({"success": False}))
+    assert run_query("x") is None
+
+
+def test_run_query_none_on_http_error(monkeypatch, missive_env):
+    def boom(req, timeout=None):
+        raise urllib.error.URLError("backend down")
+    monkeypatch.setattr(di.urllib.request, "urlopen", boom)
+    assert run_query("x") is None
+
+
+def test_run_query_none_when_no_token(monkeypatch):
+    monkeypatch.setenv("MISSIVE_BASE_URL", "https://missive.example.tw")
+    monkeypatch.delenv("MISSIVE_API_TOKEN", raising=False)
+    called = MagicMock()
+    monkeypatch.setattr(di.urllib.request, "urlopen", called)
+    assert run_query("x") is None
+    called.assert_not_called()
+
+
+def test_run_query_empty_question_no_call(monkeypatch, missive_env):
+    called = MagicMock()
+    monkeypatch.setattr(di.urllib.request, "urlopen", called)
     assert run_query("   ") is None
     called.assert_not_called()
 
