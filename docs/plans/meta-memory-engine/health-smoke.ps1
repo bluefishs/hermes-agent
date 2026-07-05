@@ -121,6 +121,31 @@ except Exception as ex:
   } else {
     Add-Result 'C-1b v1-chat' 'SKIP' '-Quick 跳過'
   }
+
+  # C-1c /v1 業務查詢 dispatch 攔截（慢 ~70s，-Quick 跳過）— 驗候選#3：回應不應是文字化 tool_call
+  # 弱模型有時把 query.py agent_query 寫成文字不執行；攔截生效則回填真答案（含數字）。
+  if (-not $Quick) {
+    $pyd = @'
+import os,json,re,urllib.request as u
+k=os.environ['API_SERVER_KEY']
+d=json.dumps({'model':'meta','messages':[{'role':'user','content':'系統裡公文總共幾份？'}]}).encode()
+req=u.Request('http://localhost:8642/v1/chat/completions',data=d,headers={'Authorization':'Bearer '+k,'Content-Type':'application/json'})
+try:
+    c=json.loads(u.urlopen(req,timeout=240).read())['choices'][0]['message']['content']
+    print('TEXTIFIED' if ('query.py' in c and 'agent_query' in c) else ('OK' if re.search(r'\d',c) else 'NONUM'))
+except Exception:
+    print('ERR')
+'@
+    # 本檢查專驗「攔截安全網健康」＝回應不應洩漏文字化 tool_call。TEXTIFIED 才是攔截壞掉；
+    # NONUM（模型未回數字）屬回應變異非攔截問題，不讓 health-smoke 因模型變異 flap 成 WARN。
+    $disp = "$(($pyd | & $docker exec -i ck-hermes-gateway /opt/hermes/.venv/bin/python3 - 2>$null) | Select-Object -Last 1)".Trim()
+    if ($disp -eq 'OK') { Add-Result 'C-1c dispatch' 'PASS' '業務查詢回真答案（含數字、無文字化 tool_call）' }
+    elseif ($disp -eq 'NONUM') { Add-Result 'C-1c dispatch' 'PASS' '無文字化 tool_call（攔截健康）；本次模型未回數字＝回應變異' }
+    elseif ($disp -eq 'TEXTIFIED') { Add-Result 'C-1c dispatch' 'WARN' '回文字化 tool_call → 攔截未生效，查 HERMES_V1_DISPATCH_FIX / dispatch_intercept' }
+    else { Add-Result 'C-1c dispatch' 'WARN' "dispatch 探針回 $disp（非阻斷；探針/後端暫態）" }
+  } else {
+    Add-Result 'C-1c dispatch' 'SKIP' '-Quick 跳過'
+  }
 }
 
 # ─── 輸出 + log ──────────────────────────────────────────────────
