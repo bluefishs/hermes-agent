@@ -1184,6 +1184,11 @@ class APIServerAdapter(BasePlatformAdapter):
             except Exception:
                 logger.warning("business fastpath failed; falling through to agent", exc_info=True)
                 _fp_answer = None
+            if not _fp_answer:
+                # Observability for the fail-safe path: backend transient / no usable
+                # answer → the request proceeds through the normal agent loop below.
+                logger.warning("dispatch-intercept: business fastpath fall-through, using agent path (q=%r)",
+                               user_message[:80])
             if _fp_answer:
                 logger.warning("dispatch-intercept: business fastpath served (q=%r)", user_message[:80])
                 _fp_answer = convert_zh(_fp_answer)

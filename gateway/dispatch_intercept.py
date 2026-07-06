@@ -194,10 +194,13 @@ def run_query(question: str, timeout: int = 90) -> str | None:
         logger.warning("dispatch-intercept: agent_query HTTP call failed", exc_info=True)
         return None
     if not isinstance(data, dict) or not data.get("success"):
+        logger.warning("dispatch-intercept: agent_query returned success=false (error=%r)",
+                       (data.get("error") if isinstance(data, dict) else None))
         return None
     answer = data.get("answer")
     if isinstance(answer, str) and answer.strip():
         return answer
+    logger.warning("dispatch-intercept: agent_query success but empty answer")
     return None
 
 
