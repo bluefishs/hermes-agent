@@ -105,5 +105,24 @@ def intercept_business_dispatch(response_text, original_question) -> str:
 - 檔案：`gateway/dispatch_intercept.py` + `tests/test_dispatch_intercept.py`（47 測試）+ api_server `:1290`（非串流）/`:1457-1481`（串流 guard）接入。
 
 ### 已知界限（誠實記）
-- 只治**失敗模式 B（文字化 tool_call）**。**失敗模式 A（純捏造數字**如「1234」無 query.py 特徵）不在攔截範圍（後處理法對 plausible-wrong 的本質限制）→ 留待 caller 側 WS-D 甲分類或未來強化。
+- 只治**失敗模式 B（文字化 tool_call）**。**失敗模式 A（純捏造數字**如「1234」無 query.py 特徵）不在攔截範圍（後處理法對 plausible-wrong 的本質限制）→ **已由 §10 fastpath 治**（計數類問句）。
 - 攔截觸發時多付一次 query.py HTTP（~18s）；閒置業務查詢可接受。
+
+---
+
+## 10. WS-D 甲 Layer-2 fastpath（2026-07-06 上線，v2026.7.4）✅ — 治模式 A
+
+**請求側短路**：窄分類器（`公文|收文|發文` × `幾份|幾筆|幾件|多少|總數|總共|數量|統計`、≤80 字短問句，**兩條件皆須**）命中時，於 agent 迴圈**之前**直呼 Missive `agent_query`（復用 §9 的 HTTP-direct `run_query`）回真值——一次治：
+- **模式 A 純捏造數字**（唯有不進弱模型迴圈才能根治 plausible-wrong）
+- **模式 B**（此類問句不再有機會文字化）
+- **延遲**（40-200s agent 迴圈 → ~18-35s 純後端）
+
+**落點決策（偏離原契約、有意為之）**：原契約 Layer-2 放 caller 側（AaaP Chat）以「不動 fork」；現改 **gateway api_server**——①gateway 是覆蓋**所有** /v1 client（含 Open WebUI）的 choke point，caller 側方案蓋不到 Open WebUI；②「不動 fork」前提已消失（v2026.7.3 起有乾淨 build 管線）。
+
+**實作**：`dispatch_intercept.matches_business_query`/`is_fastpath_enabled`（flag `HERMES_V1_BUSINESS_FASTPATH`，compose 預設 `count`、空值即時回滾）；api_server 於 completion_id 建立後、stream 分岔前短路，非串流回標準 JSON、串流回最小 SSE（role/content/finish/[DONE]），均帶 `X-Hermes-Fastpath: business-count` header + WARNING log 供觀測。**fail-safe**：未命中/run_query None/例外 → 一律 fall-through 正常 agent。63 測試綠。
+
+**實證（2026-07-06）**：非串流+串流均 header 確證 fastpath 服務、回真數字（1899→1901，後端即時成長）；一般對話（「介紹你自己」）無 header 走正常 agent、meta 人格正常；health-smoke 9/9 PASS。C-1c 一次 NONUM＝後端暫態→fall-through 正常 agent、零洩漏（fail-safe 如設計）。
+
+**已知小缺口**：run_query 回 None 的 fall-through 無 log（僅例外有）→ 觀測缺口小、屬 fail-safe 路徑；一行 log 併入下次自然 rebuild，不單獨燒 build。
+
+**語意 trade-off（誠實記）**：fastpath 回應不經 meta agent → 不寫入伺服端 session transcript。對話連貫靠 client 重送 history（Open WebUI 即此模式，6/16 已確認），伺服端 session-key 連貫本就弱，影響可忽略。
