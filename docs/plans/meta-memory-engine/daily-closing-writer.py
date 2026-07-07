@@ -13,12 +13,43 @@ Agent 任務只剩確認（回 [SILENT] 或一句話）。
 """
 from __future__ import annotations
 
+import json
+import os
 import sys
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 TPE = ZoneInfo("Asia/Taipei")
+
+# S3 段 B（2026-07-07 接通）：Missive digest → daily 頁。
+# WO-2 解鎖後 GET /api/ai/memory/digest 回坤哥意識體成長摘要（含現成繁中 digest_text，
+# 不需 LLM=413 教訓相容）。fail-safe：任何錯誤回 None、daily 照寫。
+_INTERNAL_TO_HTTPS = {"http://host.docker.internal:8001": "https://missive.cksurvey.tw"}
+
+
+def fetch_missive_digest(timeout: int = 20) -> str | None:
+    """GET Missive 記憶 digest；回 digest_text 或 None（任何失敗）。"""
+    token = os.environ.get("MISSIVE_API_TOKEN", "").strip()
+    if not token:
+        return None
+    base = os.environ.get("MISSIVE_BASE_URL", "https://missive.cksurvey.tw").rstrip("/")
+    base = _INTERNAL_TO_HTTPS.get(base, base)
+    if not base.startswith("https://"):
+        return None
+    req = urllib.request.Request(
+        base + "/api/ai/memory/digest",
+        headers={"X-Service-Token": token, "Accept": "application/json",
+                 "User-Agent": "ck-skill-helper/1.0 (daily-closing-writer)"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        text = data.get("digest_text")
+        return text.strip() if isinstance(text, str) and text.strip() else None
+    except Exception:
+        return None
 
 
 def extract_today_entries(log_text: str, today: str) -> list[str]:
@@ -31,7 +62,7 @@ def extract_today_entries(log_text: str, today: str) -> list[str]:
     return entries
 
 
-def build_daily_content(today: str, entries: list[str]) -> str:
+def build_daily_content(today: str, entries: list[str], digest: str | None = None) -> str:
     """組出 daily/YYYY-MM-DD.md 內容。"""
     if not entries:
         summary = "- 靜默日（今日無實質 wiki 動作）"
@@ -46,6 +77,8 @@ def build_daily_content(today: str, entries: list[str]) -> str:
         pattern = "（由本 script 自動產生，無 LLM 分析；日後手動或換強模型補）"
         uncertainty = "無（script 模式下不做判斷）"
 
+    digest_block = digest if digest else "（本日未能取得 Missive digest——端點/網路暫態，非阻斷）"
+
     return f"""---
 type: daily
 date: {today}
@@ -57,6 +90,10 @@ generated_by: daily-closing-writer.py
 ## 今日動作摘要
 
 {summary}
+
+## 坤哥（Missive 意識體）成長摘要
+
+{digest_block}
 
 ## 可 escalate 或 pattern-emerging
 
@@ -90,8 +127,11 @@ def main() -> int:
     log_text = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
     entries = extract_today_entries(log_text, today)
 
+    # S3 段 B：拉 Missive 意識體成長 digest（fail-safe，取不到照寫 daily）
+    digest = fetch_missive_digest()
+
     # 寫 daily 檔（idempotent 覆寫）
-    content = build_daily_content(today, entries)
+    content = build_daily_content(today, entries, digest)
     daily_path.write_text(content, encoding="utf-8")
 
     # 追加 log.md
@@ -99,7 +139,8 @@ def main() -> int:
         append_log_entry(log_path, today, f"{today}.md")
 
     # stdout 給 cron 注入 agent（僅供 log）
-    print(f"[daily-closing-writer] {today}: wrote {daily_path} ({len(entries)} log entries this day)")
+    digest_note = "digest ok" if digest else "digest unavailable"
+    print(f"[daily-closing-writer] {today}: wrote {daily_path} ({len(entries)} log entries this day, {digest_note})")
     return 0
 
 
