@@ -30,7 +30,8 @@
 |---|---|---|
 | WO-2：`POST /api/ai/memory/digest` 405 | 跨 repo 阻斷（S3 段 A；R2 記憶價值化的前置）| **CK_Missive session** |
 | pre-push gate 4 個 stale MEMORY.md（CK-GPS-v3/CK-KMapAdvisor/hermes-agent/D--CKProject）| 本 session 不能正當修（改時間戳＝作弊）；期間 push 靠 `--no-verify` | **各自 repo session** |
-| fastpath fall-through（run_query None）無 log | 觀測小缺口，fail-safe 路徑 | 併下次自然 rebuild，勿單獨燒 build |
+| ~~fastpath fall-through（run_query None）無 log~~ | ✅ **7/07 已補**（v2026.7.4.1：fall-through/success=false/empty answer 皆 warning）＝觀察期前最後一次 hermes 變更 | 已結案 |
+| gate 衛生（原 4 個 stale MEMORY.md）| ✅ 7/07 清 2（hermes-agent legacy 標接手、D--CKProject 補跨 repo 動態＝誠實內容更新）；餘 3（GPS-v3/KMapAdvisor/lvrland 33d 新過線）屬他域 | **各自 repo session** |
 | fork 落後上游 5864 commits | 上游多為 memory API/computer-use/vision 修復，非急迫 | 依 `upstream-sync-cadence.md` 節奏另開評估 |
 | session_search 讓 meta 主動用 | prompt 層記憶強化前次實測負向（D-α/D-β）→ 不投入 | 凍結（除非模型換強） |
 | 伺服端 session-key 連貫 / 跨 session 記憶綜合 | 模型強度牆 D-δ，免費基礎不投入 | 凍結 |

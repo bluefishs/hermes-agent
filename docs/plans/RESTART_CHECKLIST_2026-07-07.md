@@ -6,7 +6,7 @@
 
 | 項 | 值 |
 |---|---|
-| hermes image | `ckproject/hermes-agent:v2026.7.4`（git `4089b27ef`，web/gateway/ops 三容器）|
+| hermes image | `ckproject/hermes-agent:v2026.7.4.1`（fastpath 觀測補齊版；web/gateway/ops 三容器）|
 | gateway flags | `HERMES_ZH_CONVERT=s2twp`（R1 繁簡）/ `HERMES_V1_DISPATCH_FIX=agent_query`（文字化 tool_call 攔截）/ `HERMES_V1_BUSINESS_FASTPATH=count`（業務計數 fastpath）|
 | rollback images | `v2026.7.3.1` / `v2026.7.3` / `v2026.5.22` 均在本機（改 `.env` VERSION+SHA → `up -d` 不 build，<2min）|
 | meta config | `/opt/data/profiles/meta/config.yaml` 含 `platform_toolsets.api_server`（13→10 toolset；volume 態，重建方式見 meta-memory-engine/README）|
