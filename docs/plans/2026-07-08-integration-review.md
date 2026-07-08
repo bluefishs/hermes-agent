@@ -70,7 +70,12 @@ cron tick 由 **`ck-hermes-ops` sidecar 驅動（DA-2）** → awakening writer 
 - ⏭️ **R-6 聯邦擴充**（維持外部工單）：lvrland/pile 依 ADR-CK-003 §6 比照坤哥開 digest 端點後，`FEDERATION_PLATFORMS` 各加一行即接入（屬各域 session）。
 - ✅ **R-7 時區文件校正**：meta-memory-engine README 補「cron expr 為 UTC」對照與**雙 ticker env 等價**教訓（新增 cron script env 依賴時 gateway/ops 兩容器都要有）。
 
-### 追加確認（辦理過程新發現）
+### 完善波 2（2026-07-08 晚間，同日續辦）
+- ✅ **DA-7 sidecar env 守衛**（`ops-sidecar.sh`）：啟動即檢查 `MISSIVE_API_TOKEN`/`MISSIVE_BASE_URL`，缺失 loud log（stdout→Loki 可收）——讓「compose 改動靜默丟 env」同型缺失在部署當下可見。正向（env 在、無 WARN）與負向（env -u 模擬缺失、守衛觸發）雙向驗證過；sidecar 已重啟套用。
+- ✅ **C-3d 兩 copy 漂移哨兵**（health-smoke 第 11 檢查）：比對 repo 版控副本 vs volume 執行副本（cron 真跑 volume 那份）md5（去 `\r` 正規化防 autocrlf 假陽性），任一 writer 漂移即 WARN 並指引「docker cp repo→volume，勿反向」。實跑 PASS。治本專案反覆家族「改錯檔/兩 copy 未同源」。
+- ✅ **今晚 daily-closing 自然跑實戰確證**：15:00:36 UTC（36 秒偏移＝ops ticker 執行）→ `digest ok`、daily 頁含坤哥摘要（40114 實體）——修復後環境＋新版 writer 的第一次無人工自然成功。
+- ✅ **fastpath 觀測例行讀數**（容器生命週期內）：`fastpath served=2`、`backfilled=0`、`fall-through=0`＝無文字化洩漏、無捏造回填需求，攔截網閒置健康。
+- 剩餘追蹤僅時間門檻項：明晨 07:30 awakening 自然跑（B-S3-OBS 連 3 夜確證起點）。
 - **雙 ticker 競速解釋了 7/07 的不對稱**：daily-closing（整點 :00）被 Windows 任務（exec 到 gateway、有 token）搶到故有 digest；awakening 兩晚被 60s 的 ops ticker 搶到故失敗。env 等價化後競速不再影響結果。
 - `daily-closing` 的 fetch 其實也依賴 `MISSIVE_API_TOKEN`（無 token 直接 None）——修復前它能成功純屬 ticker 競速運氣，本次一併去 fail-silent。
 

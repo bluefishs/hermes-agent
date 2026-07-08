@@ -106,6 +106,23 @@ if (-not $dockerReady) {
   elseif ($fedStr -eq 'FEDFAIL') { Add-Result 'C-3c federation' 'WARN' '最新 briefing 無聯邦 digest → 看 briefing 平臺行失敗原因；查 ops 容器 MISSIVE env / Missive digest 端點' }
   else { Add-Result 'C-3c federation' 'WARN' "聯邦檢查異常（$fedStr）→ briefings 目錄無檔或探針失敗" }
 
+  # C-3d 兩 copy 漂移（2026-07-08）— repo 版控副本 vs volume 執行副本（cron 真跑的是 volume 那份）。
+  # 本專案反覆失敗家族「改錯檔/兩 copy 未同源」的哨兵化：任一 writer 內容不一致即 WARN。
+  # 比對前去 \r（CRLF/LF 正規化），避免 git autocrlf 造成假陽性。
+  $md5 = [System.Security.Cryptography.MD5]::Create()
+  $driftList = @()
+  foreach ($s in @('daily-closing-writer.py', 'daily-awakening-writer.py')) {
+    $localPath = Join-Path $here $s
+    if (-not (Test-Path $localPath)) { $driftList += "$s(repo 缺檔)"; continue }
+    $txt = (Get-Content -Raw -Encoding UTF8 $localPath) -replace "`r", ""
+    $lh = ([BitConverter]::ToString($md5.ComputeHash([Text.Encoding]::UTF8.GetBytes($txt))) -replace '-', '').ToLower()
+    $vh = ("$(& $docker exec ck-hermes-gateway sh -c "tr -d '\r' < /opt/data/profiles/meta/scripts/$s | md5sum" 2>$null)" -split '\s+')[0]
+    if (-not $vh) { $driftList += "$s(volume 缺檔/探針失敗)" }
+    elseif ($lh -ne $vh) { $driftList += $s }
+  }
+  if ($driftList.Count -eq 0) { Add-Result 'C-3d copy-sync' 'PASS' 'repo↔volume 兩 copy 一致（closing+awakening）' }
+  else { Add-Result 'C-3d copy-sync' 'WARN' ("兩 copy 漂移：{0} → docker cp repo 版入 volume + chown 10000（勿反向蓋掉版控）" -f ($driftList -join ', ')) }
+
   # C-4 Open WebUI
   $ui = & $docker exec ck-hermes-gateway sh -c 'curl -s -m 15 -o /dev/null -w "%{http_code}" http://ck-open-webui:8080' 2>$null
   if ($ui -eq '200' -or $ui -eq '302') { Add-Result 'C-4 open-webui' 'PASS' "UI $ui" }
