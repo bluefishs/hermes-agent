@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -30,26 +31,41 @@ _INTERNAL_TO_HTTPS = {"http://host.docker.internal:8001": "https://missive.cksur
 
 
 def fetch_missive_digest(timeout: int = 20) -> str | None:
-    """GET Missive 記憶 digest；回 digest_text 或 None（任何失敗）。"""
+    """GET Missive 記憶 digest；回 digest_text 或 None（任何失敗）。
+
+    R-3/R-4（2026-07-08）：失敗原因印 stdout（勿再 fail-silent——段C 曾因 ops 容器缺
+    env 靜默失敗兩晚才被覆盤揪出）；網路層失敗重試 1 次（digest 端點偶發 CF 502）。
+    """
     token = os.environ.get("MISSIVE_API_TOKEN", "").strip()
     if not token:
+        print("[daily-closing-writer] digest 跳過：無 MISSIVE_API_TOKEN（檢查本容器 env_file）")
         return None
     base = os.environ.get("MISSIVE_BASE_URL", "https://missive.cksurvey.tw").rstrip("/")
     base = _INTERNAL_TO_HTTPS.get(base, base)
     if not base.startswith("https://"):
+        print(f"[daily-closing-writer] digest 跳過：base 非 HTTPS（{base}）")
         return None
     req = urllib.request.Request(
         base + "/api/ai/memory/digest",
         headers={"X-Service-Token": token, "Accept": "application/json",
                  "User-Agent": "ck-skill-helper/1.0 (daily-closing-writer)"},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        text = data.get("digest_text")
-        return text.strip() if isinstance(text, str) and text.strip() else None
-    except Exception:
-        return None
+    last_err = ""
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            text = data.get("digest_text")
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+            last_err = "回應無 digest_text"
+        except Exception as e:  # noqa: BLE001 — fail-safe：digest 失敗不阻斷 daily
+            last_err = f"{type(e).__name__}: {e}"
+        if attempt == 0:
+            print(f"[daily-closing-writer] digest 第 1 次失敗（{last_err}），30s 後重試")
+            time.sleep(30)
+    print(f"[daily-closing-writer] digest 失敗（{last_err}），本日 daily 無 digest")
+    return None
 
 
 def extract_today_entries(log_text: str, today: str) -> list[str]:

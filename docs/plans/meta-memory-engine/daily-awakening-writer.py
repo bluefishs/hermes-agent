@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -33,24 +34,55 @@ FEDERATION_PLATFORMS = {
     "missive": "/opt/data/skills/ck-missive-bridge/scripts/query.py",
 }
 
+# R-4（2026-07-08）：digest 端點偶發 CF 502，單次失敗即丟整晚 digest → 失敗後重試 1 次。
+_FED_RETRIES = 1
+_FED_RETRY_DELAY_S = 30
 
-def collect_federation(wiki_root: Path, today: str) -> list[tuple[str, str | None]]:
-    """逐平臺拉 memory_digest；成功→寫 raw/federation/ 並回 digest_text，失敗→None。
+
+def _run_memory_digest(query_py: str) -> tuple[dict, str]:
+    """跑一次 query.py memory_digest。回 (payload, 失敗原因)；成功時原因為空字串。"""
+    proc = subprocess.run(
+        [sys.executable, query_py, "memory_digest"],
+        capture_output=True, text=True, timeout=60,
+        cwd=str(Path(query_py).parent),
+    )
+    raw = (proc.stdout or "").strip()
+    try:
+        payload = json.loads(raw or "{}")
+    except ValueError:
+        return {}, (f"stdout 非 JSON（rc={proc.returncode}，"
+                    f"stderr 尾：{(proc.stderr or '')[-200:].strip() or '無'}）")
+    if payload.get("ok") and payload.get("data", {}).get("digest_text"):
+        return payload, ""
+    # R-3（2026-07-08 儀器化）：非 ok payload 曾整整兩晚靜默吞掉 no_token（ops 容器缺
+    # MISSIVE env），briefing 只見籠統「不可達」→ 把 query.py 的 error/message 帶出來。
+    reason = payload.get("error") or "payload 無 digest_text"
+    if payload.get("message"):
+        reason = f"{reason}：{payload['message'][:120]}"
+    return payload, str(reason)
+
+
+def collect_federation(wiki_root: Path, today: str) -> list[tuple[str, str | None, str]]:
+    """逐平臺拉 memory_digest；成功→寫 raw/federation/ 並回 digest_text，失敗→(None, 原因)。
 
     全程 fault-isolated：任何平臺任何錯誤都只影響該平臺段落，絕不 raise。
+    失敗原因一律進 stdout（cron output 只保 stdout）與 briefing 該平臺行。
     """
-    results: list[tuple[str, str | None]] = []
+    results: list[tuple[str, str | None, str]] = []
     fed_dir = wiki_root / "raw" / "federation"
     for platform, query_py in FEDERATION_PLATFORMS.items():
         digest_text: str | None = None
+        fail_reason = ""
         try:
-            proc = subprocess.run(
-                [sys.executable, query_py, "memory_digest"],
-                capture_output=True, text=True, timeout=60,
-                cwd=str(Path(query_py).parent),
-            )
-            payload = json.loads(proc.stdout.strip() or "{}")
-            if payload.get("ok") and payload.get("data", {}).get("digest_text"):
+            for attempt in range(1 + _FED_RETRIES):
+                payload, fail_reason = _run_memory_digest(query_py)
+                if not fail_reason:
+                    break
+                if attempt < _FED_RETRIES:
+                    print(f"[daily-awakening-writer] federation {platform} 第 {attempt + 1} 次失敗"
+                          f"（{fail_reason}），{_FED_RETRY_DELAY_S}s 後重試")
+                    time.sleep(_FED_RETRY_DELAY_S)
+            if not fail_reason:
                 data = payload["data"]
                 digest_text = data["digest_text"]
                 fed_dir.mkdir(parents=True, exist_ok=True)
@@ -65,23 +97,24 @@ def collect_federation(wiki_root: Path, today: str) -> list[tuple[str, str | Non
                     encoding="utf-8",
                 )
         except Exception as e:  # noqa: BLE001 — 聯邦收集絕不阻斷本地 briefing（契約 fault isolation）
-            print(f"[daily-awakening-writer] federation {platform} 收集失敗（跳過）: {e}",
-                  file=sys.stderr)
-        results.append((platform, digest_text))
+            fail_reason = f"{type(e).__name__}: {e}"
+        if fail_reason:
+            print(f"[daily-awakening-writer] federation {platform} 收集失敗（跳過）: {fail_reason}")
+        results.append((platform, digest_text, fail_reason))
     return results
 
 
-def build_federation_section(results: list[tuple[str, str | None]], today: str) -> str:
+def build_federation_section(results: list[tuple[str, str | None, str]], today: str) -> str:
     """組「跨平臺意識體」段落（無平臺配置時回空字串）。"""
     if not results:
         return ""
     lines = ["\n## 跨平臺意識體\n"]
-    for platform, digest_text in results:
+    for platform, digest_text, fail_reason in results:
         if digest_text:
             lines.append(f"**{platform}**：{digest_text}")
             lines.append(f"（原始：raw/federation/{platform}-{today}.md）\n")
         else:
-            lines.append(f"**{platform}**：(digest 不可達，跳過)\n")
+            lines.append(f"**{platform}**：(digest 不可達：{fail_reason or '原因不明'}，跳過)\n")
     return "\n".join(lines)
 
 
@@ -185,7 +218,7 @@ def main() -> int:
 
     morning_path.write_text(content, encoding="utf-8")
 
-    fed_ok = sum(1 for _, t in fed_results if t)
+    fed_ok = sum(1 for _, t, _r in fed_results if t)
     print(f"[daily-awakening-writer] {today}: wrote {morning_path} "
           f"(based on {yesterday}, {len(entries)} entries, "
           f"federation {fed_ok}/{len(fed_results)})")

@@ -96,6 +96,16 @@ if (-not $dockerReady) {
   if ($tick -and $tick.State -ne 'Disabled') { Add-Result 'C-3b tick-task' 'PASS' "CK-Hermes-Cron-Tick $($tick.State)" }
   else { Add-Result 'C-3b tick-task' 'WARN' 'CK-Hermes-Cron-Tick 不存在/停用 → R2 不自主 fire' }
 
+  # C-3c S3 聯邦 digest 落地（R-5，2026-07-08）— 驗最新晨間 briefing 含聯邦 digest。
+  # 判定用 ASCII 標記「raw/federation/」（成功行才有的連結），避免 CJK 跨 PowerShell/docker exec 失真。
+  # 背景：段C collector 曾因 ops sidecar 缺 MISSIVE env 靜默失敗兩晚（briefing 只見「不可達」），
+  # 哨兵化防同型 fail-silent 再潛伏。WARN 級（非阻斷；失敗原因看 briefing 平臺行＝R-3 儀器化輸出）。
+  $fed = & $docker exec ck-hermes-gateway sh -c 'f=$(ls -t /opt/data/profiles/meta/wiki/briefings/morning-*.md 2>/dev/null | head -1); if [ -z "$f" ]; then echo NOFILE; elif grep -q "raw/federation/" "$f"; then echo FEDOK; else echo FEDFAIL; fi' 2>$null
+  $fedStr = "$fed".Trim()
+  if ($fedStr -eq 'FEDOK') { Add-Result 'C-3c federation' 'PASS' '最新晨間 briefing 含聯邦 digest（raw/federation 連結在）' }
+  elseif ($fedStr -eq 'FEDFAIL') { Add-Result 'C-3c federation' 'WARN' '最新 briefing 無聯邦 digest → 看 briefing 平臺行失敗原因；查 ops 容器 MISSIVE env / Missive digest 端點' }
+  else { Add-Result 'C-3c federation' 'WARN' "聯邦檢查異常（$fedStr）→ briefings 目錄無檔或探針失敗" }
+
   # C-4 Open WebUI
   $ui = & $docker exec ck-hermes-gateway sh -c 'curl -s -m 15 -o /dev/null -w "%{http_code}" http://ck-open-webui:8080' 2>$null
   if ($ui -eq '200' -or $ui -eq '302') { Add-Result 'C-4 open-webui' 'PASS' "UI $ui" }
