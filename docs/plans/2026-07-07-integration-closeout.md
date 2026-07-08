@@ -28,7 +28,7 @@
 
 | 議題 | 狀態 | 歸屬 |
 |---|---|---|
-| ~~WO-2：`/api/ai/memory/digest` 405~~ | ✅ **7/07 CK_Missive 完成段 A（GET 200 回坤哥成長摘要+現成 digest_text）→ 本 session 同日接通段 B**：`daily-closing-writer.py` 拉 digest 入 daily 頁（fail-safe、無 LLM）；實測 `digest ok`、daily 頁含「坤哥成長摘要」（1902 份/35691 實體/2 crystal/7 pattern）。**S3 跨平臺統整管道 live、R2 內容稀薄（0 log entries）獲得每日實質餵養**。POST 仍 405 但契約走 GET、無影響 | 已結案 |
+| ~~WO-2：`/api/ai/memory/digest` 405~~ | ✅ **7/07 S3 三段全線到位**：段 A＝CK_Missive 開 GET 端點（200 回坤哥成長摘要+現成 digest_text；POST 仍 405 但契約走 GET 無影響）；段 B＝預寫 `memory_digest` action 端到端驗證 ok；段 C＝**使用者**完成 awakening writer `collect_federation()`（federation raw 頁實證 `missive-2026-07-07.md`）。本 session 另加**契約外第二消費端**：`daily-closing-writer.py` 拉 digest 入 daily 頁（fail-safe、無 LLM；實測 `digest ok`、頁含坤哥摘要 1902 份/35691 實體）。**S3 跨平臺統整管道 live、R2「0 log entries」內容稀薄獲每日雙時段餵養（15:00 daily + 23:30 federation）** | 已結案 |
 | pre-push gate 4 個 stale MEMORY.md（CK-GPS-v3/CK-KMapAdvisor/hermes-agent/D--CKProject）| 本 session 不能正當修（改時間戳＝作弊）；期間 push 靠 `--no-verify` | **各自 repo session** |
 | ~~fastpath fall-through（run_query None）無 log~~ | ✅ **7/07 已補**（v2026.7.4.1：fall-through/success=false/empty answer 皆 warning）＝觀察期前最後一次 hermes 變更 | 已結案 |
 | gate 衛生（原 4 個 stale MEMORY.md）| ✅ 7/07 清 2（hermes-agent legacy 標接手、D--CKProject 補跨 repo 動態＝誠實內容更新）；餘 3（GPS-v3/KMapAdvisor/lvrland 33d 新過線）屬他域 | **各自 repo session** |
