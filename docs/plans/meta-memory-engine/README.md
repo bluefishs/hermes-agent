@@ -38,6 +38,10 @@ gateway 內建排程器不 tick，但**外部 `hermes cron tick` 已證可執行
 
 **本機過渡方案已安裝並 end-to-end 驗證**：Windows 工作排程器任務 `CK-Hermes-Cron-Tick`，每 5 分鐘跑 [`tick-driver.ps1`](tick-driver.ps1) → `hermes cron tick`。驗證：強制 daily-closing 到期 → Start-ScheduledTask → `LastTaskResult=0` + daily wiki 檔由 task 驅動的 tick 正確產出。∴ R2 **全自動**：每日 23:00 TPE 寫 daily、07:30 TPE 寫 morning briefing。
 
+⚠️ **時區對照（R-7，2026-07-08）**：`cron/jobs.json` 的 cron expr 是 **UTC**——`0 15 * * *`＝23:00 TPE（daily-closing）、`30 23 * * *`＝翌晨 07:30 TPE（awakening）。讀 jobs.json 或 cron output 時間戳（容器 UTC）勿誤當本地時刻。
+
+⚠️ **雙 ticker 執行容器（2026-07-08 教訓）**：兩個 tick 駆動並存（Windows 任務 `tick-driver.ps1` → exec 到 **gateway** 容器；ops sidecar 60s → **ops** 容器），哪個先搶到 file-lock，cron script 就在哪個容器執行——**兩容器 env 必須等價**。S3 段C 曾因 ops 容器缺 `MISSIVE_API_TOKEN` 靜默失敗兩晚（7/08 已在 compose 給 hermes-ops 加掛與 gateway 同一 env_file 根治）。新增 cron script 依賴的 env 時，兩容器都要有。
+
 **長期歸宿（建議遷移）**：CK_AaaP hermes-stack sidecar（每 1–5 分鐘 `hermes cron tick`，版控於 compose、隨 stack 起落、跨機器可攜）。遷移後可移除本機 Windows 任務（雙驅動因 file-lock 安全，但無必要）。
 
 ### Windows 任務管理（PowerShell）

@@ -60,18 +60,19 @@ cron tick 由 **`ck-hermes-ops` sidecar 驅動（DA-2）** → awakening writer 
 
 ## 4. 整體建議與規劃
 
-### 立即（本次已做）
-- ✅ R-1 hermes-ops 補 env_file 並重建 sidecar（段C 根治）。
+### 辦理結果（R-2~R-5、R-7 於 2026-07-08 同日辦畢；R-6 為外部工單）
 
-### P1（下一次接觸點執行，皆小工）
-- **R-2 明晨驗收段C cron 真跑**：`morning-2026-07-09.md` 有坤哥摘要即可宣告 S3 三段「cron 全自主」成立；失敗則回此文件 §2 續查。
-- **R-3 失敗可觀測性**：二選一（a）fork 內 `cron/scheduler.py` output 檔納 stderr；（b）writer 把 collect 失敗原因（exception/error json）直接寫進 briefing 該平臺行（取代籠統「不可達」）。建議 (b)——不動 fork、改 profile script 即可。
-- **R-4 digest 取得加 1 次 retry**（collector 與 daily-closing 的 fetch 各加一次、間隔數秒），治偶發 502 丟整晚 digest。
+- ✅ **R-1** hermes-ops 補 env_file 並重建 sidecar（段C 根治）。
+- ✅ **R-2 段C cron 真跑驗收（提前達成）**：以 `hermes cron run dba66619fddf` 觸發、由 **ops sidecar** tick 於 09:03:08 UTC 執行（60s 內、非 Windows 任務 5min 邊界＝確為先前必失敗的容器）→ **`federation 1/1`**、`morning-2026-07-08.md` 跨平臺段含坤哥摘要（1906 份/38114 實體）、`raw/federation/missive-2026-07-08.md` 由 cron 寫入。**S3 三段「cron 全自主」成立**；明晨 07:30 自然跑為追加確證。
+- ✅ **R-3 失敗儀器化（採 b 案，不動 fork）**：`collect_federation` 兩失敗分支（非 ok payload〔曾靜默吞 no_token 兩晚的那支〕與 exception）都把原因寫進 briefing 平臺行（`(digest 不可達：<原因>，跳過)`）與 **stdout**（cron output 只保 stdout）；`daily-closing` 的 `fetch_missive_digest` 同步去 fail-silent（no token/非 HTTPS/請求失敗皆印原因）。
+- ✅ **R-4 digest retry**：collector subprocess 與 closing fetch 各加 1 次重試（間隔 30s），治偶發 CF 502 丟整晚 digest。兩 copy 同步（repo＋volume chown 10000、容器內 py_compile 過）。
+- ✅ **R-5 health-smoke 增 C-3c federation**：驗最新晨間 briefing 含 `raw/federation/` 連結（ASCII 標記避 CJK 跨 PowerShell 失真）；WARN 級不阻斷、指引看 R-3 儀器化輸出。實跑 **10/10 全 PASS**（含 C-1b/C-1c 完整版）。RESTART_CHECKLIST 同步 9→10 檢查＋C-3c 處置行。
+- ⏭️ **R-6 聯邦擴充**（維持外部工單）：lvrland/pile 依 ADR-CK-003 §6 比照坤哥開 digest 端點後，`FEDERATION_PLATFORMS` 各加一行即接入（屬各域 session）。
+- ✅ **R-7 時區文件校正**：meta-memory-engine README 補「cron expr 為 UTC」對照與**雙 ticker env 等價**教訓（新增 cron script env 依賴時 gateway/ops 兩容器都要有）。
 
-### P2（規劃）
-- **R-5 health-smoke 增 C-3c**：檢查最新 morning briefing 的 federation 段非「不可達」（或 raw/federation 近 2 日有新頁），把段C 納哨兵閉環。
-- **R-6 聯邦擴充**：lvrland/pile 依 ADR-CK-003 §6 比照坤哥開 digest 端點後，`FEDERATION_PLATFORMS` 各加一行即接入（外部工單，屬各域 session）。
-- **R-7 文件時區統一**：後續文件寫 cron 時刻一律標 UTC 與本地雙值。
+### 追加確認（辦理過程新發現）
+- **雙 ticker 競速解釋了 7/07 的不對稱**：daily-closing（整點 :00）被 Windows 任務（exec 到 gateway、有 token）搶到故有 digest；awakening 兩晚被 60s 的 ops ticker 搶到故失敗。env 等價化後競速不再影響結果。
+- `daily-closing` 的 fetch 其實也依賴 `MISSIVE_API_TOKEN`（無 token 直接 None）——修復前它能成功純屬 ticker 競速運氣，本次一併去 fail-silent。
 
 ### 姿勢維持
 - 穩定觀察期原則不變：gateway/hermes core 本次零變更；下一最高 CP 前進點仍＝聯邦內容深化（R2 有互動才有摘要）與 R-6 擴充，非再動 hermes。
