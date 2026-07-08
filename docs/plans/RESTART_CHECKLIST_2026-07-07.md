@@ -28,7 +28,7 @@
 
 登入後 ~3min `CK-Hermes-Health-Smoke` 自動跑，**只需看 `docs/plans/meta-memory-engine/health-smoke.log` 末行**：
 
-- `OVERALL=PASS`（**10 檢查**〔2026-07-08 起〕：G-1 nvidia-hook / G-2 ollama-infer / C-1a meta-perm / C-2 r1-zh / C-3 r2-cron / C-3b tick-task / **C-3c federation**〔驗晨間 briefing 含聯邦 digest〕/ C-4 open-webui / C-1b v1-chat / **C-1c dispatch**）→ 完成。
+- `OVERALL=PASS`（**11 檢查**〔2026-07-08 起〕：G-1 nvidia-hook / G-2 ollama-infer / C-1a meta-perm / C-2 r1-zh / C-3 r2-cron / C-3b tick-task / **C-3c federation**〔驗晨間 briefing 含聯邦 digest〕/ **C-3d copy-sync**〔驗 writer repo↔volume 兩 copy 一致〕/ C-4 open-webui / C-1b v1-chat / **C-1c dispatch**）→ 完成。
 - `G-1 nvidia-hook` 紅 → **`wsl --shutdown`** 後重啟 Docker Desktop（**勿 `docker restart ck-ollama`**，確定性崩潰只會停成 Exited）。6/16 P0 事故 SOP 不變。
 - `C-1a meta-perm` 紅 → `docker exec -u root ck-hermes-gateway chown -R 10000:10000 /opt/data/profiles`（6/15 bind-mount 權限重置 SOP）。
 - `C-1c dispatch` WARN=TEXTIFIED → 查 gateway env `HERMES_V1_DISPATCH_FIX` 是否遺失；NONUM/暫態非阻斷。
