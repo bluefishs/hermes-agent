@@ -22,7 +22,10 @@
 | /v1 工具集裁剪 | `/opt/data` volume（meta config）| ✅ | ✅（volume 不動）|
 | keep-warm + DA-6 smoke | `ck-hermes-ops` sidecar（compose 常駐）| ✅ | ✅ |
 | R2 記憶引擎 | volume（scripts/cron）+ Windows `CK-Hermes-Cron-Tick` | ✅ | ✅ |
+| S3 聯邦 collector | volume（writer）+ **ops sidecar env_file**（MISSIVE token，2026-07-08 補）+ DA-7 啟動守衛 | ✅ | ✅ |
 | health-smoke 哨兵 | Windows `CK-Hermes-Health-Smoke`（登入自動跑）| ✅ | n/a |
+
+> **Pre-restart 基線（2026-07-09 15:10 驗）**：health-smoke **11/11 全 PASS**；CK_Hermes 工作樹 clean；兩 Windows 任務 Ready+StartWhenAvailable；ops 容器 MISSIVE env 已烤入 Config.Env（存活 restart）；S3 聯邦連續 2 日 `federation 1/1`（07-08 手動+自然 closing、07-09 晨自然 awakening），B-S3-OBS 進入連 3 夜確證軌（第 1 夜過）。→ **可安全重啟**。
 
 ## C. 重啟後驗證（一步）
 
