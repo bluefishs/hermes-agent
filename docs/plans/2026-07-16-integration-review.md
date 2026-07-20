@@ -74,7 +74,18 @@
 - Pre-restart 基線：本輪 live 態＝health-smoke 11 PASS + 1 外部 WARN（可診斷）、工作樹 clean、兩 Windows 任務 Ready、DA-7 token 存活、全容器 unless-stopped。
 - 重啟 SOP 續讀 `RESTART_CHECKLIST_2026-07-07.md`（12 檢查〔含 C-3c/C-3d〕，末行判讀；C-3c WARN 已有診斷指引）。
 
-## 5. 台帳讀數（本輪快照，2026-07-16 ~10:15）
+## 4b. 7/20 觀察更新（watch item 收斂）
+
+距 7/16 覆盤 4 天、期間無重啟（hermes 容器 `Up 4 days`）、系統穩定。
+
+- **✅ CF 502 watch item 收斂＝孤立暫態，不觸發 R-4**：7/16 覆盤列「若 7 日內再 miss ≥2 夜才升級 R-4」。實測 federation raw 頁 **7/16、7/17、7/18、7/19、7/20 夜夜齊全**（7/15 單夜 502 後即自然恢復、連 5 夜成功）→ **未達門檻，維持不動 config**。R-4 retry×1 對「孤立單夜暫態」的容忍度足夠，本案驗證了「單夜 miss 不工程、fail-safe + loud log 足以承接」的紀律是對的。
+- **health-smoke 現況複跑 PASS 11/11**：7/16 WARN 的 log 末行是因哨兵只在登入跑、4 天無重啟無登入故未刷新（非現況）；7/20 09:11 手動複跑 **OVERALL=PASS（FAIL=0 WARN=0）**，C-3c federation 回 PASS，證 7/16 WARN 已自然消退。
+- **R2 持續**：兩 cron `last_status=ok`、`completed 36/37`、briefing 連續至 7/20；坤哥 07/12–07/19 成長摘要＝公文 **1943** 份（7/15 是 1933）、實體 **47170**（期間新增 2398）。
+- **容器**：55 全 Up ~4d、0 非健康、0 exited（vs 7/16 的 56，差 1 為次要 stack 容器，非 hermes/業務核心）。
+
+→ **姿勢不變**：穩定觀察期紀律維持、不動任何 runtime config；watch item 收斂關閉。
+
+## 5. 台帳讀數（本輪快照，2026-07-16 ~10:15；7/20 更新見 §4b）
 
 - 容器：56 Up ~2h / 0 非健康 / 0 exited
 - health-smoke 末行：`[2026-07-16 08:26:30] OVERALL=WARN | ... C-3c federation=WARN ...`（其餘 11 PASS）
